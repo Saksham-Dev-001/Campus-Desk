@@ -1,0 +1,881 @@
+/* =====================================================================
+   CampusDesk - Assignments & Offline Submission Tracker
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   Grid
+   --------------------------------------------------------------------- */
+.asg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+@media (max-width: 1200px) {
+  .asg-grid { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+}
+@media (max-width: 900px) {
+  .asg-grid { grid-template-columns: 1fr; gap: 14px; }
+}
+
+/* ---------------------------------------------------------------------
+   Card
+   --------------------------------------------------------------------- */
+.asg-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: transform .18s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.asg-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md), 0 10px 25px rgba(15,23,42,.07);
+  border-color: var(--border-strong);
+}
+
+/* Status accent top strip */
+.asg-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3.5px;
+  background: var(--success);
+}
+.asg-card.closed::before  { background: var(--text-3); }
+.asg-card.overdue::before { background: var(--danger); }
+.asg-card.soon::before    { background: var(--warn); }
+
+/* ---------------------------------------------------------------------
+   Header
+   --------------------------------------------------------------------- */
+.asg-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 16px 12px;
+}
+.asg-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: rgba(43,92,255,.1);
+  color: var(--accent);
+}
+.asg-icon svg { width: 22px; height: 22px; stroke-width: 1.75; }
+.asg-card.closed .asg-icon { background: var(--surface-3); color: var(--text-3); }
+.asg-card.overdue .asg-icon { background: rgba(225,29,72,.1); color: var(--danger); }
+
+.asg-head-info { flex: 1; min-width: 0; }
+.asg-subject {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 3px;
+}
+.asg-subject svg { width: 11px; height: 11px; }
+.asg-author {
+  font-size: 11.5px;
+  color: var(--text-3);
+  display: block;
+}
+
+/* Status badge */
+.asg-status {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.asg-status.open     { background: rgba(16,185,129,.14); color: var(--success); }
+.asg-status.closed   { background: var(--surface-3);       color: var(--text-3); }
+.asg-status.overdue  { background: rgba(225,29,72,.14);    color: var(--danger); }
+
+/* ---------------------------------------------------------------------
+   Body
+   --------------------------------------------------------------------- */
+.asg-body {
+  padding: 0 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.asg-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -.15px;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+.asg-desc {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.55;
+  margin-bottom: 12px;
+  white-space: pre-line;
+  word-break: break-word;
+}
+
+/* Due date row */
+.asg-due {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 12.5px;
+  color: var(--text-2);
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.asg-due svg {
+  width: 14px;
+  height: 14px;
+  opacity: .75;
+  flex-shrink: 0;
+  stroke-width: 2;
+}
+.asg-due .due-label {
+  font-weight: 650;
+  color: var(--text);
+}
+.asg-due .due-time {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.asg-card.overdue .asg-due { background: rgba(225,29,72,.06); border-color: rgba(225,29,72,.2); }
+.asg-card.overdue .asg-due .due-label { color: var(--danger); }
+.asg-card.soon .asg-due { background: rgba(217,119,6,.06); border-color: rgba(217,119,6,.2); }
+.asg-card.soon .asg-due .due-label { color: var(--warn); }
+
+/* Days-left pill inside due row */
+.days-pill {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  background: var(--accent-soft);
+  color: var(--accent);
+  margin-left: 4px;
+}
+.asg-card.overdue .days-pill { background: rgba(225,29,72,.15); color: var(--danger); }
+.asg-card.soon .days-pill    { background: rgba(217,119,6,.15); color: var(--warn); }
+
+/* Target chips */
+.asg-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.asg-chips .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 7px;
+  background: var(--surface-2);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  border: 1px solid var(--border);
+  line-height: 1.4;
+}
+.asg-chips .chip svg { width: 11px; height: 11px; }
+
+/* ---------------------------------------------------------------------
+   Attached Question Paper / Resource Box
+   --------------------------------------------------------------------- */
+.asg-attachment-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  margin-top: 4px;
+  margin-bottom: 10px;
+  transition: border-color .15s ease, background .15s ease;
+}
+.asg-attachment-box:hover {
+  border-color: var(--accent);
+}
+.asg-att-icon {
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.asg-att-details {
+  flex: 1;
+  min-width: 0;
+}
+.asg-att-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.asg-att-meta {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+.asg-att-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* ---------------------------------------------------------------------
+   Student: Offline Submission Cards
+   --------------------------------------------------------------------- */
+.asg-offline-card {
+  margin-top: 8px;
+  margin-bottom: 14px;
+  padding: 13px 15px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.asg-offline-card.verified {
+  background: rgba(16, 185, 129, 0.07);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+.asg-offline-card.pending {
+  background: rgba(43, 92, 255, 0.05);
+  border-color: rgba(43, 92, 255, 0.22);
+}
+.asg-offline-card.closed {
+  background: rgba(225, 29, 72, 0.05);
+  border-color: rgba(225, 29, 72, 0.2);
+}
+
+.sc-badge-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sc-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  letter-spacing: .2px;
+}
+.sc-badge-pill.verified {
+  background: rgba(16, 185, 129, 0.16);
+  color: var(--success);
+}
+.sc-badge-pill.pending {
+  background: rgba(43, 92, 255, 0.14);
+  color: var(--accent);
+}
+.sc-badge-pill.closed {
+  background: rgba(225, 29, 72, 0.14);
+  color: var(--danger);
+}
+
+.sc-grade-badge {
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.sc-grade-badge b {
+  color: var(--success);
+  font-weight: 800;
+}
+
+.sc-offline-info {
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+
+.sc-feedback-bubble {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-top: 4px;
+}
+.sc-feedback-bubble .fb-label {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--accent);
+  margin-bottom: 2px;
+}
+.sc-feedback-bubble .fb-text {
+  font-size: 12.5px;
+  color: var(--text);
+  margin: 0;
+  line-height: 1.45;
+}
+
+.sc-offline-instructions {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-2);
+}
+.sc-offline-instructions .instr-title {
+  font-weight: 650;
+  color: var(--text);
+  margin: 0 0 3px;
+}
+.sc-offline-instructions .instr-desc {
+  margin: 0;
+  color: var(--text-2);
+}
+.sc-closed-text {
+  font-size: 12px;
+  color: var(--text-3);
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------------
+   Teacher: Summary Bar & Progress
+   --------------------------------------------------------------------- */
+.asg-tracker-summary {
+  padding: 10px 16px 12px;
+  background: var(--surface-2);
+  border-top: 1px solid var(--border);
+}
+.asg-ts-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 7px;
+  font-size: 12px;
+}
+.asg-ts-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-2);
+  font-weight: 500;
+}
+.asg-ts-label svg {
+  width: 14px;
+  height: 14px;
+  opacity: .7;
+}
+.asg-ts-label b {
+  color: var(--text);
+  font-weight: 700;
+}
+.asg-ts-pct {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.asg-progress-track {
+  height: 6px;
+  background: var(--surface-3);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.asg-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), #6366f1);
+  transition: width .3s ease;
+}
+
+/* ---------------------------------------------------------------------
+   Teacher: Footer Actions
+   --------------------------------------------------------------------- */
+.asg-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+.asg-foot-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.asg-count-pill {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.2);
+  font-size: 11px;
+  font-weight: 700;
+  margin: 0 2px;
+}
+.chevron-arrow {
+  font-size: 11px;
+  line-height: 1;
+  display: inline-block;
+  transition: transform .2s ease;
+}
+
+/* ---------------------------------------------------------------------
+   Teacher: Submissions Tracker Drawer
+   --------------------------------------------------------------------- */
+.asg-tracker-drawer {
+  background: var(--surface-2);
+  border-top: 1px solid var(--border-strong);
+  padding: 14px 16px 16px;
+  animation: asgSlideDown .2s ease-out;
+}
+@keyframes asgSlideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.asg-tracker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.tracker-filter-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex: 1;
+  min-width: 240px;
+  flex-wrap: wrap;
+}
+.asg-search-input {
+  flex: 1;
+  min-width: 140px;
+  max-width: 240px;
+  padding: 7px 11px;
+  font-size: 12px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+}
+.asg-search-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(43,92,255,.15);
+}
+
+.asg-filter-tabs {
+  display: inline-flex;
+  background: var(--surface-3);
+  padding: 2px;
+  border-radius: 9px;
+  gap: 2px;
+}
+.tab-btn {
+  background: transparent;
+  border: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  padding: 5px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all .14s;
+  font-family: inherit;
+}
+.tab-btn:hover {
+  color: var(--text);
+}
+.tab-btn.active {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+
+/* Roster List */
+.asg-roster-list {
+  max-height: 380px;
+  overflow-y: auto;
+  margin: 0 -4px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 4px;
+}
+.asg-roster-empty {
+  padding: 24px 12px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--text-3);
+  font-style: italic;
+}
+
+.asg-roster-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  transition: background .12s, border-color .12s;
+  flex-wrap: wrap;
+}
+.asg-roster-row:hover {
+  border-color: var(--border-strong);
+}
+.asg-roster-row.is-submitted {
+  border-left: 3px solid var(--success);
+}
+.asg-roster-row.is-pending {
+  border-left: 3px solid var(--text-3);
+}
+
+.asg-r-user {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 140px;
+  flex: 1.2;
+}
+.user-meta {
+  min-width: 0;
+  flex: 1;
+}
+.user-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.user-sub {
+  display: block;
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 1px;
+}
+
+.asg-r-status {
+  flex-shrink: 0;
+}
+.badge-sub {
+  display: inline-flex;
+  flex-direction: column;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  line-height: 1.25;
+}
+.badge-sub.done {
+  background: rgba(16,185,129,.12);
+  color: var(--success);
+}
+.badge-sub.done small {
+  font-size: 9.5px;
+  opacity: .8;
+  font-weight: 500;
+}
+.badge-sub.pending {
+  background: var(--surface-3);
+  color: var(--text-3);
+}
+
+.asg-r-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 2;
+  justify-content: flex-end;
+  min-width: 220px;
+}
+.grade-feedback-box {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.asg-grade-in {
+  width: 78px;
+  padding: 6px 8px;
+  font-size: 12px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: inherit;
+  text-align: center;
+  font-weight: 600;
+}
+.asg-grade-in:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface);
+}
+.asg-fb-in {
+  flex: 1;
+  min-width: 90px;
+  padding: 6px 9px;
+  font-size: 12px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: inherit;
+}
+.asg-fb-in:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+.asg-btn-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* ---------------------------------------------------------------------
+   Compact Buttons
+   --------------------------------------------------------------------- */
+.asg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: all .14s;
+  font-family: inherit;
+  text-decoration: none;
+  line-height: 1;
+  white-space: nowrap;
+}
+.asg-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+.asg-btn:hover {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.asg-btn.sm {
+  padding: 6px 10px;
+  font-size: 11.5px;
+}
+.asg-btn.primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  box-shadow: 0 2px 6px rgba(43,92,255,.2);
+}
+.asg-btn.primary:hover {
+  background: var(--accent-hover, #204ecf);
+  border-color: var(--accent-hover, #204ecf);
+  color: #fff;
+}
+.asg-btn.danger:hover {
+  background: var(--danger-soft, rgba(225,29,72,.1));
+  color: var(--danger);
+  border-color: rgba(225,29,72,.35);
+}
+.asg-btn.ghost {
+  background: transparent;
+  border-color: transparent;
+  padding: 6px 8px;
+}
+.asg-btn.ghost:hover {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+/* ---------------------------------------------------------------------
+   Create Modal: File Upload Box & Offline Callout
+   --------------------------------------------------------------------- */
+.asg-file-upload-box {
+  position: relative;
+  border: 2px dashed var(--border-strong);
+  border-radius: 12px;
+  padding: 16px 14px;
+  text-align: center;
+  background: var(--surface-2);
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
+}
+.asg-file-upload-box:hover {
+  border-color: var(--accent);
+  background: rgba(43,92,255,.03);
+}
+.asg-file-upload-box input[type="file"] {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.asg-file-upload-box .upload-hint {
+  pointer-events: none;
+}
+.asg-file-upload-box .upload-icon {
+  font-size: 24px;
+  display: block;
+  margin-bottom: 4px;
+}
+.asg-file-upload-box #assignFilePrompt {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  display: block;
+}
+
+.asg-offline-notice {
+  background: rgba(43, 92, 255, 0.07);
+  border-left: 3px solid var(--accent);
+  padding: 11px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text-2);
+  margin-top: 14px;
+  line-height: 1.5;
+}
+.asg-offline-notice b {
+  color: var(--text);
+}
+
+/* ---------------------------------------------------------------------
+   Empty State
+   --------------------------------------------------------------------- */
+.asg-empty {
+  text-align: center;
+  padding: 60px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  margin-top: 12px;
+}
+.asg-empty .empty-illust {
+  width: 84px; height: 84px;
+  margin: 0 auto 16px;
+  border-radius: 20px;
+  background: var(--surface-3);
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  font-size: 36px;
+}
+.asg-empty h3 { font-size: 17px; margin-bottom: 6px; color: var(--text); }
+.asg-empty p { color: var(--text-2); max-width: 400px; margin: 0 auto 20px; line-height: 1.6; font-size: 13.5px; }
+
+/* ---------------------------------------------------------------------
+   Mobile Responsiveness (Android & Small Screens)
+   --------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .asg-card { border-radius: 14px; }
+  .asg-title { font-size: 15px; }
+  .asg-due { font-size: 12px; }
+  .asg-tracker-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .tracker-filter-group {
+    min-width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .asg-search-input {
+    max-width: 100%;
+  }
+  .asg-filter-tabs {
+    display: flex;
+    width: 100%;
+  }
+  .tab-btn {
+    flex: 1;
+    text-align: center;
+    padding: 6px 4px;
+    font-size: 10.5px;
+  }
+  .asg-roster-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .asg-r-user {
+    width: 100%;
+  }
+  .asg-r-status {
+    align-self: flex-start;
+  }
+  .asg-r-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+  .asg-btn-actions {
+    flex-shrink: 0;
+  }
+  .asg-foot {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .asg-foot .asg-btn.primary {
+    justify-content: center;
+  }
+  .asg-foot-actions {
+    justify-content: stretch;
+  }
+  .asg-foot-actions form {
+    flex: 1;
+    display: flex;
+  }
+  .asg-foot-actions .asg-btn {
+    flex: 1;
+    justify-content: center;
+  }
+}
