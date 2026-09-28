@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Search — CampusDesk{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>🔍 Search</h1>
+    <div class="sub">{% if q %}Results for “{{ q }}”{% else %}Search across your permitted content{% endif %}</div>
+  </div>
+</div>
+
+{% if q %}
+  {% set total = results.notices|length + results.assignments|length + results.files|length + results.subjects|length %}
+
+  <div class="search-summary">
+    <span>Found <b>{{ total }}</b> result{{ '' if total == 1 else 's' }} for <b>“{{ q }}”</b></span>
+    <div class="spacer"></div>
+    {% if results.notices %}<span class="pill">📢 {{ results.notices|length }} notice{{ '' if results.notices|length == 1 else 's' }}</span>{% endif %}
+    {% if results.assignments %}<span class="pill">📝 {{ results.assignments|length }} assignment{{ '' if results.assignments|length == 1 else 's' }}</span>{% endif %}
+    {% if results.files %}<span class="pill">📚 {{ results.files|length }} file{{ '' if results.files|length == 1 else 's' }}</span>{% endif %}
+    {% if results.subjects %}<span class="pill">📖 {{ results.subjects|length }} subject{{ '' if results.subjects|length == 1 else 's' }}</span>{% endif %}
+  </div>
+
+  {% if results.notices %}
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-head"><h2>📢 Notices</h2></div>
+      {% for n in results.notices %}
+        <div class="item" style="padding:12px 14px;">
+          <div class="item-head">
+            <div class="item-title">{{ n.title }}</div>
+            <span class="badge priority-{{ n.priority }}">{{ n.priority|title }}</span>
+          </div>
+          {% if n.description %}<div class="item-desc">{{ n.description[:160] }}{% if n.description|length > 160 %}…{% endif %}</div>{% endif %}
+          <div class="item-meta">
+            <span>{{ n.publish_date.strftime('%d %b %Y') }}</span>
+            {% if n.author %}<span>by {{ n.author.name }}</span>{% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if results.assignments %}
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-head"><h2>📝 Assignments</h2></div>
+      {% for a in results.assignments %}
+        <div class="item" style="padding:12px 14px;">
+          <div class="item-head">
+            <div class="item-title">{{ a.title }}</div>
+            <span class="badge {% if a.status == 'closed' %}gray{% else %}success{% endif %}">{{ a.status }}</span>
+          </div>
+          <div class="item-meta">
+            {% if a.due_date %}<span>📅 Due {{ a.due_date.strftime('%d %b %Y') }}</span>{% endif %}
+            {% if a.subject %}<span class="badge">{{ a.subject.name }}</span>{% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if results.files %}
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-head"><h2>📚 Files</h2></div>
+      {% for f in results.files %}
+        <div class="item" style="padding:12px 14px;">
+          <div class="item-head">
+            <div class="item-title">{{ f.icon }} {{ f.filename }}</div>
+            <div class="file-actions">
+              {% if f.is_previewable %}
+                <button class="btn ghost sm"
+                        onclick="previewFile({{ f.id }}, '{{ f.filename|e }}', '{{ f.mime_type or '' }}')"
+                        title="Preview">👁️</button>
+              {% endif %}
+              <a href="{{ url_for('files.download_file', fid=f.id) }}" class="btn outline sm">⬇</a>
+            </div>
+          </div>
+          <div class="item-meta">
+            <span>v{{ f.version }}</span>
+            <span>{{ (f.size_bytes / 1024)|round(1) }} KB</span>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if results.subjects %}
+    <div class="card">
+      <div class="card-head"><h2>📖 Subjects</h2></div>
+      {% for s in results.subjects %}
+        <div class="item" style="padding:12px 14px;">
+          <div class="item-title">
+            {{ s.name }}
+            {% if s.code %}<span class="badge gray">{{ s.code }}</span>{% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if total == 0 %}
+    <div class="card">
+      <div class="empty rich">
+        <div class="empty-illust">🔍</div>
+        <h3>No results found</h3>
+        <p>We couldn't find anything matching “{{ q }}”. Try a different search term or check your spelling.</p>
+      </div>
+    </div>
+  {% endif %}
+{% else %}
+  <div class="card">
+    <div class="empty rich">
+      <div class="empty-illust">🔍</div>
+      <h3>Start typing to search</h3>
+      <p>Search across notices, assignments, files and subjects — results are filtered by your permissions.</p>
+      <p class="small muted" style="margin-top:16px;">Pro tip: press <span class="kbd">Ctrl</span> <span class="kbd">K</span> anywhere to focus the search bar.</p>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}
