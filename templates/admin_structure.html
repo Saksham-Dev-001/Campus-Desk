@@ -1,0 +1,583 @@
+{% extends "base.html" %}
+{% block title %}Academic Structure — CampusDesk{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/structure.css') }}?v=1">
+
+<div class="page-head">
+  <div>
+    <h1>🏛️ Academic Structure</h1>
+    <div class="sub">Course → Branch → Year → Semester → Section → Batch → Subject</div>
+  </div>
+</div>
+
+<div class="grid cols-2">
+
+  {# ==================== Courses ==================== #}
+  <div class="card as-card" data-list="courses">
+    <div class="card-head">
+      <h2>Courses <span class="as-count" data-count-for="courses">{{ courses|length }}</span></h2>
+      <div class="as-search">
+        <input type="text" placeholder="Search…" data-search-for="courses">
+      </div>
+    </div>
+    <div class="as-list" data-list-body="courses">
+      {% for c in courses %}
+        <div class="as-item" data-search="{{ c.name|lower }}">
+          <span class="as-name">{{ c.name }}</span>
+          <div class="as-item-actions">
+            <button type="button" class="as-btn-icon edit" title="Edit Course" onclick='openEditModal("course", {{ c.id }}, { name: {{ c.name|tojson }} })'>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </button>
+            <form method="post" style="display:inline;" onsubmit='return confirm("Delete course " + {{ c.name|tojson }} + "? Associated branches and students will be detached.");'>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="action" value="delete">
+              <input type="hidden" name="kind" value="course">
+              <input type="hidden" name="item_id" value="{{ c.id }}">
+              <button type="submit" class="as-btn-icon del" title="Delete Course">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+      {% if not courses %}
+        <div class="as-empty">No courses yet.</div>
+      {% endif %}
+    </div>
+    <div class="as-pager" data-pager-for="courses"></div>
+    <form method="post" class="as-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="kind" value="course">
+      <input type="text" name="name" placeholder="New course name" required>
+      <button class="btn sm">Add</button>
+    </form>
+  </div>
+
+  {# ==================== Branches ==================== #}
+  <div class="card as-card" data-list="branches">
+    <div class="card-head">
+      <h2>Branches <span class="as-count" data-count-for="branches">{{ branches|length }}</span></h2>
+      <div class="as-search">
+        <input type="text" placeholder="Search code or name…" data-search-for="branches">
+      </div>
+    </div>
+    <div class="as-list" data-list-body="branches">
+      {% for b in branches %}
+        <div class="as-item" data-search="{{ (b.code ~ ' ' ~ b.name)|lower }}">
+          <div class="as-item-left">
+            <span class="as-name">{{ b.name }}</span>
+            <span class="badge gray">{{ b.code }}</span>
+          </div>
+          <div class="as-item-actions">
+            <button type="button" class="as-btn-icon edit" title="Edit Branch" onclick='openEditModal("branch", {{ b.id }}, { name: {{ b.name|tojson }}, code: {{ b.code|tojson }}, course_id: {{ b.course_id or "null" }} })'>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </button>
+            <form method="post" style="display:inline;" onsubmit='return confirm("Delete branch " + {{ b.name|tojson }} + " (" + {{ b.code|tojson }} + ")? Associated sections, students, and timetable entries will be detached.");'>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="action" value="delete">
+              <input type="hidden" name="kind" value="branch">
+              <input type="hidden" name="item_id" value="{{ b.id }}">
+              <button type="submit" class="as-btn-icon del" title="Delete Branch">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+      {% if not branches %}
+        <div class="as-empty">No branches yet.</div>
+      {% endif %}
+    </div>
+    <div class="as-pager" data-pager-for="branches"></div>
+    <form method="post" class="as-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="kind" value="branch">
+      <div class="as-form-row">
+        <input type="text" name="name" placeholder="Branch name" required>
+        <input type="text" name="code" placeholder="Code (CSE)" required>
+      </div>
+      <div class="as-form-row">
+        <select name="course_id" required>
+          <option value="">Select course</option>
+          {% for c in courses %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+        </select>
+        <button class="btn sm">Add Branch</button>
+      </div>
+    </form>
+  </div>
+
+  {# ==================== Years ==================== #}
+  <div class="card as-card" data-list="years">
+    <div class="card-head">
+      <h2>Years <span class="as-count" data-count-for="years">{{ years|length }}</span></h2>
+      <div class="as-search">
+        <input type="text" placeholder="Search…" data-search-for="years">
+      </div>
+    </div>
+    <div class="as-list" data-list-body="years">
+      {% for y in years %}
+        <div class="as-item" data-search="{{ y.name|lower }}">
+          <span class="as-name">{{ y.name }}</span>
+          <div class="as-item-actions">
+            <button type="button" class="as-btn-icon edit" title="Edit Year" onclick='openEditModal("year", {{ y.id }}, { name: {{ y.name|tojson }}, order_index: {{ y.order_index or 0 }} })'>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </button>
+            <form method="post" style="display:inline;" onsubmit='return confirm("Delete year " + {{ y.name|tojson }} + "? Associated sections and timetable entries will be detached.");'>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="action" value="delete">
+              <input type="hidden" name="kind" value="year">
+              <input type="hidden" name="item_id" value="{{ y.id }}">
+              <button type="submit" class="as-btn-icon del" title="Delete Year">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+      {% if not years %}
+        <div class="as-empty">No years yet.</div>
+      {% endif %}
+    </div>
+    <div class="as-pager" data-pager-for="years"></div>
+    <form method="post" class="as-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="kind" value="year">
+      <div class="as-form-row">
+        <input type="text" name="name" placeholder="e.g. 1st Year" required>
+        <input type="number" name="order_index" placeholder="Order" style="max-width:100px;">
+        <button class="btn sm">Add</button>
+      </div>
+    </form>
+  </div>
+
+  {# ==================== Semesters ==================== #}
+  <div class="card as-card" data-list="semesters">
+    <div class="card-head">
+      <h2>Semesters <span class="as-count" data-count-for="semesters">{{ semesters|length }}</span></h2>
+      <div class="as-search">
+        <input type="text" placeholder="Search…" data-search-for="semesters">
+      </div>
+    </div>
+    <div class="as-list" data-list-body="semesters">
+      {% for s in semesters %}
+        <div class="as-item" data-search="{{ s.name|lower }}">
+          <span class="as-name">{{ s.name }}</span>
+          <div class="as-item-actions">
+            <button type="button" class="as-btn-icon edit" title="Edit Semester" onclick='openEditModal("semester", {{ s.id }}, { name: {{ s.name|tojson }}, order_index: {{ s.order_index or 0 }} })'>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </button>
+            <form method="post" style="display:inline;" onsubmit='return confirm("Delete semester " + {{ s.name|tojson }} + "? Associated subjects and timetable entries will be detached.");'>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="action" value="delete">
+              <input type="hidden" name="kind" value="semester">
+              <input type="hidden" name="item_id" value="{{ s.id }}">
+              <button type="submit" class="as-btn-icon del" title="Delete Semester">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+      {% if not semesters %}
+        <div class="as-empty">No semesters yet.</div>
+      {% endif %}
+    </div>
+    <div class="as-pager" data-pager-for="semesters"></div>
+    <form method="post" class="as-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="kind" value="semester">
+      <div class="as-form-row">
+        <input type="text" name="name" placeholder="e.g. Sem 1" required>
+        <input type="number" name="order_index" placeholder="Order" style="max-width:100px;">
+        <button class="btn sm">Add</button>
+      </div>
+    </form>
+  </div>
+
+  {# ==================== Sections ==================== #}
+  <div class="card as-card" data-list="sections">
+    <div class="card-head">
+      <h2>Sections <span class="as-count" data-count-for="sections">{{ sections|length }}</span></h2>
+      <div class="as-search">
+        <input type="text" placeholder="Search branch/year/section…" data-search-for="sections">
+      </div>
+    </div>
+    <div class="as-list" data-list-body="sections">
+      {% for s in sections %}
+        {% set _lbl = 'Section ' ~ s.name %}
+        {% if s.branch %} {% set _lbl = _lbl ~ ' · ' ~ s.branch.code %} {% endif %}
+        {% if s.year %} {% set _lbl = _lbl ~ ' · ' ~ s.year.name %} {% endif %}
+        <div class="as-item" data-search="{{ _lbl|lower }}">
+          <span class="as-name">{{ _lbl }}</span>
+          <div class="as-item-actions">
+            <button type="button" class="as-btn-icon edit" title="Edit Section" onclick='openEditModal("section", {{ s.id }}, { name: {{ s.name|tojson }}, branch_id: {{ s.branch_id or "null" }}, year_id: {{ s.year_id or "null" }} })'>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </button>
+            <form method="post" style="display:inline;" onsubmit='return confirm("Delete section " + {{ s.name|tojson }} + "? Associated batches, students, and timetable entries will be detached.");'>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="action" value="delete">
+              <input type="hidden" name="kind" value="section">
+              <input type="hidden" name="item_id" value="{{ s.id }}">
+              <button type="submit" class="as-btn-icon del" title="Delete Section">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+      {% if not sections %}
+        <div class="as-empty">No sections yet.</div>
+      {% endif %}
+    </div>
+    <div class="as-pager" data-pager-for="sections"></div>
+    <form method="post" class="as-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="kind" value="section">
+      <div class="as-form-row">
+        <input type="text" name="name" placeholder="A" required style="max-width:90px;">
+        <select name="branch_id" required>
+          <option value="">Branch</option>
+          {% for b in branches %}<option value="{{ b.id }}">{{ b.code }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="as-form-row">
+        <select name="year_id" required>
+          <option value="">Year</option>
+          {% for y in years %}<option value="{{ y.id }}">{{ y.name }}</option>{% endfor %}
+        </select>
+        <button class="btn sm">Add Section</button>
+      </div>
+    </form>
+  </div>
+
+  {# ==================== Batches ==================== #}
+  <div class="card as-card" data-list="batches">
+    <div class="card-head">
+      <h2>Batches <span class="as-count" data-count-for="batches">{{ batches|length }}</span></h2>
+      <div class="as-search">
+        <input type="text" placeholder="Search…" data-search-for="batches">
+      </div>
+    </div>
+    <div class="as-list" data-list-body="batches">
+      {% for b in batches %}
+        {% set _lbl = b.name %}
+        {% if b.section %}
+          {% set _lbl = _lbl ~ ' · ' ~ b.section.name %}
+          {% if b.section.branch %} {% set _lbl = _lbl ~ ' · ' ~ b.section.branch.code %} {% endif %}
+          {% if b.section.year %} {% set _lbl = _lbl ~ ' · ' ~ b.section.year.name %} {% endif %}
+        {% endif %}
+        <div class="as-item" data-search="{{ _lbl|lower }}">
+          <span class="as-name">{{ _lbl }}</span>
+          <div class="as-item-actions">
+            <button type="button" class="as-btn-icon edit" title="Edit Batch" onclick='openEditModal("batch", {{ b.id }}, { name: {{ b.name|tojson }}, section_id: {{ b.section_id or "null" }} })'>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </button>
+            <form method="post" style="display:inline;" onsubmit='return confirm("Delete batch " + {{ b.name|tojson }} + "? Associated students and timetable entries will be detached.");'>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="action" value="delete">
+              <input type="hidden" name="kind" value="batch">
+              <input type="hidden" name="item_id" value="{{ b.id }}">
+              <button type="submit" class="as-btn-icon del" title="Delete Batch">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+      {% if not batches %}
+        <div class="as-empty">No batches yet.</div>
+      {% endif %}
+    </div>
+    <div class="as-pager" data-pager-for="batches"></div>
+    <form method="post" class="as-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="kind" value="batch">
+      <div class="as-form-row">
+        <input type="text" name="name" placeholder="A1" required style="max-width:90px;">
+        <select name="section_id" required>
+          <option value="">Section</option>
+          {% for s in sections %}
+            <option value="{{ s.id }}">
+              {{ s.branch.code if s.branch else '?' }} / {{ s.year.name if s.year else '?' }} / {{ s.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="as-form-row">
+        <button class="btn sm">Add Batch</button>
+      </div>
+    </form>
+  </div>
+
+</div>
+
+{# ==================== Subjects (full width) ==================== #}
+<div class="card as-card" data-list="subjects" style="margin-top:16px;">
+  <div class="card-head">
+    <h2>Subjects <span class="as-count" data-count-for="subjects">{{ subjects|length }}</span></h2>
+    <div class="as-search">
+      <input type="text" placeholder="Search subject name or code…" data-search-for="subjects">
+    </div>
+  </div>
+  <div class="as-list" data-list-body="subjects">
+    {% for s in subjects %}
+      {% set _lbl = s.name %}
+      {% if s.code %} {% set _lbl = _lbl ~ ' · ' ~ s.code %} {% endif %}
+      {% if s.branch %} {% set _lbl = _lbl ~ ' · ' ~ s.branch.code %} {% endif %}
+      {% if s.semester %} {% set _lbl = _lbl ~ ' · ' ~ s.semester.name %} {% endif %}
+      <div class="as-item" data-search="{{ _lbl|lower }}">
+        <div class="as-item-left">
+          <span class="as-name">{{ s.name }}</span>
+          <span>
+            {% if s.code %}<span class="badge gray">{{ s.code }}</span>{% endif %}
+            {% if s.branch %}<span class="badge">{{ s.branch.code }}</span>{% endif %}
+            {% if s.semester %}<span class="badge gray">{{ s.semester.name }}</span>{% endif %}
+          </span>
+        </div>
+        <div class="as-item-actions">
+          <button type="button" class="as-btn-icon edit" title="Edit Subject" onclick='openEditModal("subject", {{ s.id }}, { name: {{ s.name|tojson }}, code: {{ (s.code or "")|tojson }}, branch_id: {{ s.branch_id or "null" }}, semester_id: {{ s.semester_id or "null" }} })'>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          </button>
+          <form method="post" style="display:inline;" onsubmit='return confirm("Delete subject " + {{ s.name|tojson }} + "? Associated teacher assignments and timetable entries will be detached.");'>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="kind" value="subject">
+            <input type="hidden" name="item_id" value="{{ s.id }}">
+            <button type="submit" class="as-btn-icon del" title="Delete Subject">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+          </form>
+        </div>
+      </div>
+    {% endfor %}
+    {% if not subjects %}
+      <div class="as-empty">No subjects yet.</div>
+    {% endif %}
+  </div>
+  <div class="as-pager" data-pager-for="subjects"></div>
+  <form method="post" class="as-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="kind" value="subject">
+    <div class="as-form-row">
+      <input type="text" name="name" placeholder="Subject name" required>
+      <input type="text" name="code" placeholder="Code (CS101)" style="max-width:140px;">
+      <select name="branch_id" style="max-width:180px;">
+        <option value="">Branch</option>
+        {% for b in branches %}<option value="{{ b.id }}">{{ b.code }}</option>{% endfor %}
+      </select>
+      <select name="semester_id" style="max-width:160px;">
+        <option value="">Semester</option>
+        {% for s in semesters %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+      </select>
+      <button class="btn sm">Add Subject</button>
+    </div>
+  </form>
+</div>
+
+{# ==================== Edit Structure Modal ==================== #}
+<div class="modal-back" id="editStructureModal">
+  <form class="modal" method="post" style="max-width:460px;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="edit">
+    <input type="hidden" name="kind" id="editKind">
+    <input type="hidden" name="item_id" id="editItemId">
+    <div class="modal-head">
+      <h2 id="editModalTitle">Edit Item</h2>
+      <button type="button" class="btn ghost sm" onclick="closeEditModal()">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex; flex-direction:column; gap:12px;">
+      <div class="form-row" id="groupEditName">
+        <label>Name</label>
+        <input type="text" id="editName" name="name" required>
+      </div>
+      <div class="form-row" id="groupEditCode" style="display:none;">
+        <label>Code</label>
+        <input type="text" id="editCode" name="code">
+      </div>
+      <div class="form-row" id="groupEditOrder" style="display:none;">
+        <label>Order Index</label>
+        <input type="number" id="editOrder" name="order_index">
+      </div>
+      <div class="form-row" id="groupEditCourse" style="display:none;">
+        <label>Course</label>
+        <select id="editCourseId" name="course_id">
+          <option value="">Select Course</option>
+          {% for c in courses %}
+          <option value="{{ c.id }}">{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-row" id="groupEditBranch" style="display:none;">
+        <label>Branch</label>
+        <select id="editBranchId" name="branch_id">
+          <option value="">Select Branch</option>
+          {% for b in branches %}
+          <option value="{{ b.id }}">{{ b.name }} ({{ b.code }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-row" id="groupEditYear" style="display:none;">
+        <label>Year</label>
+        <select id="editYearId" name="year_id">
+          <option value="">Select Year</option>
+          {% for y in years %}
+          <option value="{{ y.id }}">{{ y.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-row" id="groupEditSemester" style="display:none;">
+        <label>Semester</label>
+        <select id="editSemesterId" name="semester_id">
+          <option value="">Select Semester</option>
+          {% for sem in semesters %}
+          <option value="{{ sem.id }}">{{ sem.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-row" id="groupEditSection" style="display:none;">
+        <label>Section</label>
+        <select id="editSectionId" name="section_id">
+          <option value="">Select Section</option>
+          {% for sec in sections %}
+          <option value="{{ sec.id }}">{{ sec.branch.code if sec.branch else '?' }} / {{ sec.year.name if sec.year else '?' }} / {{ sec.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn outline" onclick="closeEditModal()">Cancel</button>
+      <button class="btn" type="submit">Save Changes</button>
+    </div>
+  </form>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  'use strict';
+  var PER_PAGE = 5;
+
+  function initList(key) {
+    var body = document.querySelector('[data-list-body="' + key + '"]');
+    var pager = document.querySelector('[data-pager-for="' + key + '"]');
+    var search = document.querySelector('[data-search-for="' + key + '"]');
+    var countEl = document.querySelector('[data-count-for="' + key + '"]');
+    if (!body || !pager) return;
+
+    var allItems = Array.from(body.querySelectorAll('.as-item'));
+    var page = 1;
+
+    function filtered() {
+      var q = (search && search.value || '').trim().toLowerCase();
+      if (!q) return allItems;
+      return allItems.filter(function (el) {
+        return (el.dataset.search || '').indexOf(q) !== -1;
+      });
+    }
+
+    function render() {
+      var items = filtered();
+      var total = items.length;
+      var pages = Math.max(1, Math.ceil(total / PER_PAGE));
+      if (page > pages) page = pages;
+
+      // hide all, then show current page slice
+      allItems.forEach(function (el) { el.style.display = 'none'; });
+      var start = (page - 1) * PER_PAGE;
+      var slice = items.slice(start, start + PER_PAGE);
+      slice.forEach(function (el) { el.style.display = ''; });
+
+      // count badge
+      if (countEl) countEl.textContent = total;
+
+      // pager
+      pager.innerHTML = '';
+      if (pages <= 1) return;
+
+      var prev = document.createElement('button');
+      prev.type = 'button';
+      prev.className = 'as-page-btn';
+      prev.textContent = '‹';
+      prev.disabled = page <= 1;
+      prev.onclick = function () { page--; render(); };
+      pager.appendChild(prev);
+
+      var info = document.createElement('span');
+      info.className = 'as-page-info';
+      info.textContent = page + ' / ' + pages;
+      pager.appendChild(info);
+
+      var next = document.createElement('button');
+      next.type = 'button';
+      next.className = 'as-page-btn';
+      next.textContent = '›';
+      next.disabled = page >= pages;
+      next.onclick = function () { page++; render(); };
+      pager.appendChild(next);
+    }
+
+    if (search) {
+      search.addEventListener('input', function () { page = 1; render(); });
+    }
+    render();
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    ['courses', 'branches', 'years', 'semesters',
+     'sections', 'batches', 'subjects'].forEach(initList);
+  });
+})();
+
+function openEditModal(kind, id, data) {
+  var modal = document.getElementById('editStructureModal');
+  if (!modal) return;
+  document.getElementById('editKind').value = kind;
+  document.getElementById('editItemId').value = id;
+  document.getElementById('editModalTitle').textContent = 'Edit ' + kind.charAt(0).toUpperCase() + kind.slice(1);
+  document.getElementById('editName').value = data.name || '';
+
+  function toggle(groupId, inputId, show, val) {
+    var grp = document.getElementById(groupId);
+    if (!grp) return;
+    grp.style.display = show ? '' : 'none';
+    var inp = document.getElementById(inputId);
+    if (inp) {
+      if (show && val !== undefined && val !== null) {
+        inp.value = val;
+      } else if (!show) {
+        inp.value = '';
+      }
+    }
+  }
+
+  toggle('groupEditCode', 'editCode', kind === 'branch' || kind === 'subject', data.code);
+  toggle('groupEditOrder', 'editOrder', kind === 'year' || kind === 'semester', data.order_index);
+  toggle('groupEditCourse', 'editCourseId', kind === 'branch', data.course_id);
+  toggle('groupEditBranch', 'editBranchId', kind === 'section' || kind === 'subject', data.branch_id);
+  toggle('groupEditYear', 'editYearId', kind === 'section', data.year_id);
+  toggle('groupEditSemester', 'editSemesterId', kind === 'subject', data.semester_id);
+  toggle('groupEditSection', 'editSectionId', kind === 'batch', data.section_id);
+
+  modal.classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeEditModal() {
+  var modal = document.getElementById('editStructureModal');
+  if (modal) {
+    modal.classList.remove('show');
+    document.body.style.overflow = '';
+  }
+}
+
+document.addEventListener('click', function (e) {
+  if (e.target && e.target.id === 'editStructureModal') closeEditModal();
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') closeEditModal();
+});
+</script>
+{% endblock %}
