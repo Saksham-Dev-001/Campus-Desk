@@ -1,0 +1,581 @@
+/* =====================================================================
+   CampusDesk — Bawaal Ultimate Edition
+   Next-Gen 2026 SaaS Aesthetic · Neo-Prism Aurora Design
+   Pure 60fps GPU Hardware-Accelerated Micro-Animations
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   0. Global Ambient Background & Theme Variables
+   --------------------------------------------------------------------- */
+:root,
+[data-theme="light"] {
+  --bg-mesh: radial-gradient(at 0% 0%, rgba(124, 58, 237, 0.08) 0px, transparent 48%),
+             radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.08) 0px, transparent 48%),
+             radial-gradient(at 50% 100%, rgba(236, 72, 153, 0.06) 0px, transparent 48%),
+             radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.06) 0px, transparent 48%),
+             #f8fafc;
+  --surface: #ffffff;
+  --surface-glass: rgba(255, 255, 255, 0.88);
+  --surface-2: #f1f5f9;
+  --surface-3: #e2e8f0;
+  --border: rgba(226, 232, 240, 0.9);
+  --border-strong: #cbd5e1;
+
+  --text: #0f172a;
+  --text-2: #475569;
+  --text-3: #94a3b8;
+
+  --accent: #7c3aed;
+  --accent-hover: #6d28d9;
+  --accent-soft: rgba(124, 58, 237, 0.12);
+  --accent-2: #ec4899;
+
+  --gradient-primary: linear-gradient(135deg, #7c3aed 0%, #9333ea 50%, #ec4899 100%);
+  --gradient-accent: linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%);
+  --gradient-hero: linear-gradient(135deg, #180d38 0%, #2e1065 45%, #4c0519 100%);
+
+  /* Sidebar Tokens in Light Mode */
+  --sidebar-bg: rgba(255, 255, 255, 0.88);
+  --sidebar-text: #475569;
+  --sidebar-hi: #0f172a;
+  --sidebar-bd: rgba(226, 232, 240, 0.85);
+  --sidebar-hover-bg: rgba(124, 58, 237, 0.08);
+  --sidebar-hover-text: #7c3aed;
+  --sidebar-active-bg: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(236, 72, 153, 0.09));
+  --sidebar-active-text: #7c3aed;
+}
+
+[data-theme="dark"] {
+  --bg-mesh: radial-gradient(at 0% 0%, rgba(124, 58, 237, 0.2) 0px, transparent 42%),
+             radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.14) 0px, transparent 42%),
+             radial-gradient(at 50% 100%, rgba(236, 72, 153, 0.14) 0px, transparent 42%),
+             radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.09) 0px, transparent 42%),
+             #080b12;
+  --surface: #101524;
+  --surface-glass: rgba(16, 21, 36, 0.88);
+  --surface-2: #171e33;
+  --surface-3: #212b47;
+  --border: rgba(51, 65, 85, 0.7);
+  --border-strong: #475569;
+
+  --text: #f8fafc;
+  --text-2: #94a3b8;
+  --text-3: #64748b;
+
+  --accent: #a855f7;
+  --accent-hover: #c084fc;
+  --accent-soft: rgba(168, 85, 247, 0.22);
+  --accent-2: #f472b6;
+
+  --gradient-primary: linear-gradient(135deg, #a855f7 0%, #c084fc 50%, #f472b6 100%);
+  --gradient-accent: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #c084fc 100%);
+  --gradient-hero: linear-gradient(135deg, #090514 0%, #1e0d3b 50%, #350b24 100%);
+
+  /* Sidebar Tokens in Dark Mode */
+  --sidebar-bg: rgba(12, 16, 28, 0.9);
+  --sidebar-text: #94a3b8;
+  --sidebar-hi: #ffffff;
+  --sidebar-bd: rgba(255, 255, 255, 0.08);
+  --sidebar-hover-bg: rgba(255, 255, 255, 0.07);
+  --sidebar-hover-text: #ffffff;
+  --sidebar-active-bg: linear-gradient(135deg, rgba(168, 85, 247, 0.28), rgba(244, 114, 182, 0.18));
+  --sidebar-active-text: #ffffff;
+}
+
+/* ---------------------------------------------------------------------
+   1. Base & Page Stagger Animation (Butter Smooth, No Lag)
+   --------------------------------------------------------------------- */
+body {
+  background: var(--bg-mesh) !important;
+  background-attachment: fixed !important;
+}
+
+.content > * {
+  animation: cdSlideUpStagger 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.content > *:nth-child(1) { animation-delay: 0.02s; }
+.content > *:nth-child(2) { animation-delay: 0.06s; }
+.content > *:nth-child(3) { animation-delay: 0.10s; }
+.content > *:nth-child(4) { animation-delay: 0.14s; }
+.content > *:nth-child(5) { animation-delay: 0.18s; }
+
+@keyframes cdSlideUpStagger {
+  from { opacity: 0; transform: translateY(14px) scale(0.995); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ---------------------------------------------------------------------
+   2. Modern Glass Sidebar
+   --------------------------------------------------------------------- */
+.sidebar {
+  background: var(--sidebar-bg) !important;
+  backdrop-filter: blur(28px) !important;
+  -webkit-backdrop-filter: blur(28px) !important;
+  border-right: 1px solid var(--sidebar-bd) !important;
+  box-shadow: 2px 0 20px rgba(0, 0, 0, 0.03) !important;
+  transition: transform .25s cubic-bezier(.16,1,.3,1), background-color .25s ease !important;
+}
+
+.brand-logo {
+  background: var(--gradient-primary) !important;
+  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.45) !important;
+  animation: cdPulseGlow 3s ease-in-out infinite alternate !important;
+}
+@keyframes cdPulseGlow {
+  0%   { box-shadow: 0 4px 16px rgba(124, 58, 237, 0.35); }
+  100% { box-shadow: 0 8px 28px rgba(236, 72, 153, 0.55); }
+}
+
+.brand-text b {
+  color: var(--sidebar-hi) !important;
+  font-size: 16.5px !important;
+  font-weight: 800 !important;
+}
+.brand-text span {
+  color: var(--text-3) !important;
+  font-weight: 550 !important;
+}
+
+.nav-section {
+  color: var(--text-3) !important;
+  font-size: 10.5px !important;
+  font-weight: 750 !important;
+  letter-spacing: 1.2px !important;
+}
+
+.nav a {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 9px 12px !important;
+  border-radius: 12px !important;
+  color: var(--sidebar-text) !important;
+  font-weight: 600 !important;
+  transition: transform .18s cubic-bezier(.16,1,.3,1), background-color .15s ease, color .15s ease, box-shadow .15s ease !important;
+}
+.nav a:hover {
+  background: var(--sidebar-hover-bg) !important;
+  color: var(--sidebar-hover-text) !important;
+  transform: translateX(4px) !important;
+}
+.nav a:active {
+  transform: scale(0.96) !important;
+}
+.nav a.active {
+  background: var(--sidebar-active-bg) !important;
+  color: var(--sidebar-active-text) !important;
+  font-weight: 750 !important;
+  box-shadow: inset 0 0 0 1px rgba(124, 58, 237, 0.25) !important;
+}
+.nav a.active::before {
+  content: "";
+  position: absolute;
+  left: -14px;
+  top: 8px;
+  bottom: 8px;
+  width: 4px;
+  border-radius: 0 4px 4px 0;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
+}
+.nav a svg {
+  width: 18px !important;
+  height: 18px !important;
+  padding: 6px !important;
+  border-radius: 9px !important;
+  background: var(--surface-2) !important;
+  box-sizing: content-box !important;
+  transition: transform .18s cubic-bezier(0.16, 1, 0.3, 1), background .15s ease, color .15s ease !important;
+}
+.nav a:hover svg {
+  transform: scale(1.15) rotate(-4deg) !important;
+  background: var(--accent-soft) !important;
+  color: var(--accent) !important;
+}
+.nav a.active svg {
+  background: var(--gradient-primary) !important;
+  color: #fff !important;
+  box-shadow: 0 3px 10px rgba(124, 58, 237, 0.45) !important;
+}
+
+.sidebar-foot {
+  color: var(--text-3) !important;
+  border-top-color: var(--sidebar-bd) !important;
+}
+.sidebar-foot b {
+  color: var(--sidebar-hi) !important;
+}
+.sidebar-foot::after {
+  content: "🟢 All Systems Live";
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 10.5px;
+  font-weight: 750;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+/* ---------------------------------------------------------------------
+   3. Modern Frosted Topbar
+   --------------------------------------------------------------------- */
+.topbar {
+  background: var(--surface-glass) !important;
+  backdrop-filter: blur(28px) !important;
+  -webkit-backdrop-filter: blur(28px) !important;
+  border-bottom: 1px solid var(--border) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03) !important;
+}
+
+.topbar .search input {
+  border-radius: 14px !important;
+  border: 1px solid var(--border) !important;
+  background: var(--surface-2) !important;
+  transition: all .2s cubic-bezier(.16,1,.3,1) !important;
+}
+.topbar .search input:focus {
+  transform: scale(1.015) !important;
+  border-color: var(--accent) !important;
+  background: var(--surface) !important;
+  box-shadow: 0 0 0 4px var(--accent-soft), 0 8px 24px rgba(124, 58, 237, 0.15) !important;
+}
+
+.icon-btn {
+  transition: transform .14s cubic-bezier(.16,1,.3,1), background-color .14s ease, box-shadow .14s ease !important;
+}
+.icon-btn:hover {
+  transform: translateY(-2px) scale(1.05) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+.icon-btn:active {
+  transform: scale(0.9) !important;
+}
+
+/* ---------------------------------------------------------------------
+   4. Aurora Hero Banner
+   --------------------------------------------------------------------- */
+.hero {
+  background: var(--gradient-hero) !important;
+  border-radius: 22px !important;
+  padding: 30px 34px !important;
+  box-shadow: 0 18px 45px rgba(124, 58, 237, 0.28) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+.hero::before {
+  content: "";
+  position: absolute;
+  right: -80px; top: -80px;
+  width: 340px; height: 340px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.45), transparent 70%);
+  filter: blur(30px);
+  pointer-events: none;
+}
+.hero::after {
+  content: "";
+  position: absolute;
+  left: -60px; bottom: -90px;
+  width: 300px; height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.5), transparent 70%);
+  filter: blur(30px);
+  pointer-events: none;
+}
+.hero h1 {
+  font-size: 26px !important;
+  font-weight: 850 !important;
+  letter-spacing: -.5px !important;
+}
+.hero .tag {
+  background: rgba(255, 255, 255, 0.18) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  font-weight: 650 !important;
+  color: #fff !important;
+  padding: 5px 14px !important;
+}
+
+/* ---------------------------------------------------------------------
+   5. BAWAAL STAT CARDS (Icons, Glows, 3D Elevation)
+   --------------------------------------------------------------------- */
+.stat {
+  position: relative !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 18px !important;
+  padding: 22px 22px 20px !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05) !important;
+  transition: transform .22s cubic-bezier(.16,1,.3,1), box-shadow .22s ease, border-color .22s ease !important;
+  overflow: hidden !important;
+}
+.stat::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0; left: 0; right: 0 !important;
+  height: 4px !important;
+  border-radius: 4px 4px 0 0 !important;
+  background: var(--gradient-primary) !important;
+  transition: height .16s ease !important;
+}
+.stat:hover {
+  transform: translateY(-6px) scale(1.015) !important;
+  box-shadow: 0 20px 45px -10px rgba(124, 58, 237, 0.18), 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+  border-color: rgba(124, 58, 237, 0.35) !important;
+}
+.stat:hover::before {
+  height: 6px !important;
+}
+
+.stat-top {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 8px !important;
+}
+
+.stat .label {
+  font-size: 12px !important;
+  color: var(--text-3) !important;
+  font-weight: 750 !important;
+  text-transform: uppercase !important;
+  letter-spacing: .8px !important;
+}
+
+.stat .value {
+  font-size: 34px !important;
+  font-weight: 900 !important;
+  letter-spacing: -.9px !important;
+  color: var(--text) !important;
+  line-height: 1.1 !important;
+  margin-top: 4px !important;
+}
+
+.stat .hint {
+  font-size: 12.5px !important;
+  color: var(--text-3) !important;
+  margin-top: 6px !important;
+  font-weight: 500 !important;
+}
+
+.stat-footer {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-top: 6px !important;
+}
+
+/* Colored category topbars & bubbles */
+.grid.cols-4 > .stat:nth-child(1)::before { background: linear-gradient(90deg, #f97316, #fb923c) !important; }
+.grid.cols-4 > .stat:nth-child(2)::before { background: linear-gradient(90deg, #8b5cf6, #c084fc) !important; }
+.grid.cols-4 > .stat:nth-child(3)::before { background: linear-gradient(90deg, #06b6d4, #38bdf8) !important; }
+.grid.cols-4 > .stat:nth-child(4)::before { background: linear-gradient(90deg, #10b981, #34d399) !important; }
+
+/* Stat icon bubbles */
+.stat-bubble {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  flex-shrink: 0;
+  transition: transform .22s cubic-bezier(.16,1,.3,1) !important;
+}
+.stat:hover .stat-bubble {
+  transform: scale(1.15) rotate(-6deg) !important;
+}
+.stat-bubble.coral   { background: rgba(249, 115, 22, 0.14); color: #f97316; }
+.stat-bubble.emerald { background: rgba(16, 185, 129, 0.14); color: #10b981; }
+.stat-bubble.purple  { background: rgba(139, 92, 246, 0.14); color: #8b5cf6; }
+.stat-bubble.cyan    { background: rgba(6, 182, 212, 0.14);  color: #06b6d4; }
+.stat-bubble.amber   { background: rgba(245, 158, 11, 0.14); color: #f59e0b; }
+.stat-bubble.violet  { background: rgba(124, 58, 237, 0.14); color: #7c3aed; }
+.stat-bubble.azure   { background: rgba(59, 130, 246, 0.14); color: #3b82f6; }
+.stat-bubble.rose    { background: rgba(244, 63, 94, 0.14);  color: #f43f5e; }
+
+/* Trend indicator pills */
+.stat-badge {
+  font-size: 11px;
+  font-weight: 750;
+  padding: 3px 8px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.stat-badge.green { background: rgba(16, 185, 129, 0.14); color: #10b981; }
+.stat-badge.blue  { background: rgba(6, 182, 212, 0.14);  color: #06b6d4; }
+.stat-badge.purple{ background: rgba(139, 92, 246, 0.14); color: #8b5cf6; }
+.stat-badge.coral { background: rgba(249, 115, 22, 0.14); color: #f97316; }
+.stat-badge.gray  { background: var(--surface-2); color: var(--text-2); }
+
+/* ---------------------------------------------------------------------
+   6. BUTTONS (Shimmer Gradient & 3D Press)
+   --------------------------------------------------------------------- */
+.btn {
+  background: var(--gradient-primary) !important;
+  background-size: 200% auto !important;
+  color: #fff !important;
+  border-radius: 12px !important;
+  padding: 10px 18px !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.35) !important;
+  transition: transform .15s cubic-bezier(.16,1,.3,1), box-shadow .2s ease, background-position .4s ease, filter .2s ease !important;
+}
+.btn:hover {
+  background-position: right center !important;
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.48) !important;
+  filter: brightness(1.05) !important;
+}
+.btn:active {
+  transform: scale(0.95) !important;
+}
+
+.btn.outline {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border-strong) !important;
+  box-shadow: var(--shadow-xs) !important;
+}
+.btn.outline:hover {
+  background: var(--surface-2) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+/* ---------------------------------------------------------------------
+   7. CARDS & ITEMS (Interactive Hover Elevation)
+   --------------------------------------------------------------------- */
+.card {
+  border-radius: 18px !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05) !important;
+  transition: transform .2s cubic-bezier(.16,1,.3,1), box-shadow .2s ease, border-color .2s ease !important;
+}
+.card:hover {
+  box-shadow: 0 10px 30px -4px rgba(15, 23, 42, 0.09) !important;
+}
+
+.item {
+  border-radius: 14px !important;
+  transition: transform .18s cubic-bezier(.16,1,.3,1), box-shadow .18s ease, border-color .18s ease !important;
+}
+.item:hover {
+  transform: translateY(-3px) scale(1.006) !important;
+  box-shadow: 0 8px 24px -4px rgba(124, 58, 237, 0.12) !important;
+  border-color: rgba(124, 58, 237, 0.3) !important;
+}
+
+/* ---------------------------------------------------------------------
+   8. MOBILE DOCK (Floating Glass Capsule)
+   --------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .mobile-nav {
+    display: flex !important;
+    position: fixed !important;
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+    left: 14px !important;
+    right: 14px !important;
+    z-index: 50 !important;
+    background: var(--surface-glass) !important;
+    backdrop-filter: blur(28px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(200%) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 26px !important;
+    padding: 7px 6px !important;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.14) !important;
+  }
+  .mobile-nav a.active svg {
+    animation: cdPopSpring .28s cubic-bezier(.34,1.56,.64,1) !important;
+  }
+  @keyframes cdPopSpring {
+    0% { transform: scale(0.85); }
+    60% { transform: scale(1.22); }
+    100% { transform: scale(1.1); }
+  }
+}
+
+/* ---------------------------------------------------------------------
+   9. TABLES & DATA LISTS (Modern Frosted Glass SaaS)
+   --------------------------------------------------------------------- */
+table {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  width: 100% !important;
+}
+th {
+  background: var(--surface-2) !important;
+  color: var(--text-3) !important;
+  font-size: 11.5px !important;
+  font-weight: 750 !important;
+  text-transform: uppercase !important;
+  letter-spacing: .8px !important;
+  padding: 12px 16px !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+td {
+  padding: 13px 16px !important;
+  border-bottom: 1px solid var(--border) !important;
+  transition: background .15s ease !important;
+}
+tr:hover td {
+  background: rgba(124, 58, 237, 0.04) !important;
+}
+
+/* ---------------------------------------------------------------------
+   10. FORM INPUTS & SELECTS
+   --------------------------------------------------------------------- */
+input[type="text"], input[type="email"], input[type="password"], input[type="search"], input[type="number"], select, textarea {
+  border-radius: 12px !important;
+  border: 1px solid var(--border) !important;
+  background: var(--surface-2) !important;
+  padding: 10px 14px !important;
+  color: var(--text) !important;
+  transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease !important;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--accent) !important;
+  background: var(--surface) !important;
+  box-shadow: 0 0 0 3.5px var(--accent-soft) !important;
+  outline: none !important;
+}
+
+/* ---------------------------------------------------------------------
+   11. LIVE PULSE & BADGES
+   --------------------------------------------------------------------- */
+.pulse-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pulse-live::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 rgba(16, 185, 129, 0.4);
+  animation: cdPulseDot 2s infinite;
+}
+@keyframes cdPulseDot {
+  0%   { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70%  { box-shadow: 0 0 0 7px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.empty-illust {
+  display: inline-block !important;
+  animation: cdFloatBounce 3.5s ease-in-out infinite alternate !important;
+}
+@keyframes cdFloatBounce {
+  0%   { transform: translateY(0px) rotate(0deg); }
+  100% { transform: translateY(-8px) rotate(-3deg); }
+}
