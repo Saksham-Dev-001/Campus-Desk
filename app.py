@@ -40,13 +40,21 @@ def create_app():
         except Exception:
             return None
 
+    # In-memory cached lookups to eliminate 7 DB queries on every request
+    _target_lookups_cache = {"data": None, "expires": 0}
+
     # Inject targeting lookups into every template
     @app.context_processor
     def inject_target_lookups():
+        import time
+        now = time.time()
+        if _target_lookups_cache["data"] is not None and now < _target_lookups_cache["expires"]:
+            return _target_lookups_cache["data"]
+
         try:
             from models import (Course, Branch, Year, Semester, Section,
                                 Batch, Subject)
-            return {
+            data = {
                 "all_courses":   Course.query.order_by(Course.name).all(),
                 "all_branches":  Branch.query.order_by(Branch.code).all(),
                 "all_years":     Year.query.order_by(Year.order_index).all(),
@@ -55,6 +63,9 @@ def create_app():
                 "all_batches":   Batch.query.order_by(Batch.name).all(),
                 "all_subjects":  Subject.query.order_by(Subject.name).all(),
             }
+            _target_lookups_cache["data"] = data
+            _target_lookups_cache["expires"] = now + 300  # 5 minutes
+            return data
         except Exception:
             return {
                 "all_courses": [], "all_branches": [], "all_years": [],
