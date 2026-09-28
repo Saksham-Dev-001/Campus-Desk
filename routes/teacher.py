@@ -3,6 +3,7 @@ import csv
 import io
 import re
 from datetime import datetime
+from services.time_utils import now_ist
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, abort, current_app, jsonify)
 from flask_login import login_required, current_user
@@ -230,7 +231,7 @@ def notices():
             title=title[:200],
             description=description,
             priority=request.form.get("priority") or "normal",
-            publish_date=datetime.fromisoformat(pub) if pub else datetime.utcnow(),
+            publish_date=datetime.fromisoformat(pub) if pub else now_ist(),
             attachment_file_id=attachment_id,
             created_by=current_user.id,
             **targets,
@@ -243,7 +244,7 @@ def notices():
         flash("Announcement published.", "success")
         return redirect(url_for("teacher.notices"))
 
-    items = Notice.query.order_by(Notice.publish_date.desc()).all()
+    items = Notice.query.filter_by(active=True).order_by(Notice.publish_date.desc()).all()
     return render_template("notices.html", notices=items, mode="teacher")
 
 @teacher_bp.route("/notices/<int:nid>/delete", methods=["POST"])
@@ -251,10 +252,20 @@ def notices():
 def delete_notice(nid):
     _require_teacher()
     n = Notice.query.get_or_404(nid)
-    n.active = False
-    _audit("notice.archive", "Notice", nid, n.title)
+    title = n.title
+    if n.attachment:
+        fr = n.attachment
+        try:
+            get_storage_provider(current_app.config).delete_file(fr.storage_ref)
+        except Exception:
+            pass
+        n.attachment_file_id = None
+        db.session.flush()
+        db.session.delete(fr)
+    _audit("notice.delete", "Notice", nid, title)
+    db.session.delete(n)
     db.session.commit()
-    flash("Announcement archived.", "success")
+    flash("Announcement deleted successfully.", "success")
     return redirect(url_for("teacher.notices"))
 
 
@@ -515,7 +526,7 @@ def mark_student_submission(aid):
             grade=grade or None,
             feedback=feedback or None,
             note="Offline submission verified by teacher",
-            submitted_at=datetime.utcnow()
+            submitted_at=now_ist()
         )
         db.session.add(sub)
 
@@ -560,7 +571,7 @@ def mark_all_students(aid):
     targeted = visible_students(a)
     subs_map = {s.student_id: s for s in a.submissions}
     new_count = 0
-    now = datetime.utcnow()
+    now = now_ist()
 
     for st in targeted:
         if st.id not in subs_map:
@@ -719,7 +730,7 @@ def _render_timetable(mode, **extra):
 
     grid = {d: _group_entries([e for e in entries if e.day == d]) for d in days}
 
-    now = datetime.now()
+    now = now_ist()
     today_long, today_short = DAY_NAMES[now.weekday()]
     selected_day = request.args.get("day") or (today_short if today_short in VALID_DAYS else "Mon")
     today_entries = grid.get(selected_day, [])
