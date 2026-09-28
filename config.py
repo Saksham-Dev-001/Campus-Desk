@@ -13,10 +13,14 @@ except ImportError:
 class Config:
     # --- Core ---
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-change-me-in-production")
-    # Fix for Heroku/Neon/Supabase/Railway which give postgres:// but SQLAlchemy needs postgresql://
+    # Normalize DATABASE_URL: force psycopg2 driver so SQLAlchemy doesn't
+    # accidentally pick psycopg3 (which is not installed on Vercel).
     _db_url = os.environ.get("DATABASE_URL", "sqlite:///" + str(BASE_DIR / "campusdesk.db"))
     if _db_url.startswith("postgres://"):
-        _db_url = _db_url.replace("postgres://", "postgresql://", 1)
+        _db_url = _db_url.replace("postgres://", "postgresql+psycopg2://", 1)
+    elif _db_url.startswith("postgresql://"):
+        _db_url = _db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    # (sqlite:// and already-explicit postgresql+psycopg2:// pass through unchanged)
     SQLALCHEMY_DATABASE_URI = _db_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
