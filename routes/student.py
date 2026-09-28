@@ -1,5 +1,5 @@
-"""Student routes — dashboard, notices, assignments, timetable."""
 from datetime import datetime
+from services.time_utils import now_ist
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, abort, current_app)
 from flask_login import login_required, current_user
@@ -43,7 +43,8 @@ def dashboard():
     materials = apply_target_filter(FileRecord.query, FileRecord, s) \
         .order_by(FileRecord.updated_at.desc()).limit(6).all()
 
-    today_short = DAY_NAMES[datetime.now().weekday()][1]
+    now = now_ist()
+    today_short = DAY_NAMES[now.weekday()][1]
     timetable = apply_target_filter(
         TimetableEntry.query.filter(TimetableEntry.day == today_short),
         TimetableEntry, s).order_by(TimetableEntry.start_time).all()
@@ -51,7 +52,7 @@ def dashboard():
     notifications = Notification.query.filter_by(user_id=current_user.id) \
         .order_by(Notification.created_at.desc()).limit(6).all()
 
-    hour = datetime.now().hour
+    hour = now.hour
     greeting = "Good Morning" if hour < 12 else ("Good Afternoon" if hour < 17 else "Good Evening")
 
     return render_template("dashboard_student.html", student=s,
@@ -106,7 +107,7 @@ def timetable():
     days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
     grid = {d: sorted([e for e in entries if e.day == d], key=_time_key) for d in days}
 
-    now = datetime.now()
+    now = now_ist()
     today_long, today_short = DAY_NAMES[now.weekday()]
     today_entries = grid.get(today_short, [])
     now_str = now.strftime("%H:%M")
