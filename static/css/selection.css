@@ -1,0 +1,722 @@
+/* =====================================================================
+   CampusDesk - Premium file cards v5
+   Menu on right, long-press on mobile
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   Grid
+   --------------------------------------------------------------------- */
+.file-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+@media (max-width: 1200px) {
+  .file-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+}
+@media (max-width: 900px) {
+  .file-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+}
+@media (max-width: 600px) {
+  .file-grid { grid-template-columns: 1fr; gap: 10px; }
+}
+
+/* ---------------------------------------------------------------------
+   Card shell
+   --------------------------------------------------------------------- */
+.fcard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  min-height: 210px;
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .22s ease, border-color .2s ease;
+  text-decoration: none;
+  color: inherit;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.fcard::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .22s ease;
+  background: radial-gradient(circle at top left, rgba(43,92,255,.06), transparent 60%);
+}
+.fcard:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md), 0 12px 32px rgba(15,23,42,.08);
+  border-color: var(--border-strong);
+  z-index: 2;
+}
+.fcard:hover::before { opacity: 1; }
+.fcard:active { transform: translateY(-1px); }
+
+.fcard.is-folder {
+  background: linear-gradient(160deg, var(--surface) 55%, rgba(217,119,6,.05) 100%);
+}
+.fcard.is-folder:hover { border-color: rgba(217,119,6,.4); }
+
+.fcard.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow-md);
+}
+
+/* Long-press "showing menu" state */
+.fcard.menu-active {
+  transform: scale(.98);
+  box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow-md);
+  border-color: var(--accent);
+}
+
+/* ---------------------------------------------------------------------
+   Top row: icon (left) + menu (right)
+   --------------------------------------------------------------------- */
+.fcard-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;   /* icon left, menu right */
+  gap: 12px;
+  margin-bottom: 14px;
+  position: relative;
+}
+
+/* ---- Big SVG icon tile ---- */
+.fcard-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  transition: transform .2s ease;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.fcard-icon svg { width: 28px; height: 28px; stroke-width: 1.75; }
+.fcard:hover .fcard-icon { transform: scale(1.05) rotate(-2deg); }
+
+.fcard-icon.pdf    { background: rgba(220,38,38,.12);  color: #dc2626; }
+.fcard-icon.doc    { background: rgba(43,92,255,.12);  color: #2b5cff; }
+.fcard-icon.sheet  { background: rgba(5,150,105,.12);  color: #059669; }
+.fcard-icon.slides { background: rgba(217,119,6,.12);  color: #d97706; }
+.fcard-icon.image  { background: rgba(124,58,237,.12); color: #7c3aed; }
+.fcard-icon.zip    { background: rgba(107,114,128,.14); color: #4b5563; }
+.fcard-icon.text   { background: rgba(15,118,110,.12); color: #0f766e; }
+.fcard-icon.folder {
+  background: linear-gradient(135deg, rgba(217,119,6,.18), rgba(245,158,11,.12));
+  color: #d97706;
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+}
+.fcard-icon.folder svg { width: 30px; height: 30px; }
+
+/* ---------------------------------------------------------------------
+   3-dot menu — RIGHT SIDE of fcard-top
+   --------------------------------------------------------------------- */
+.fcard-menu {
+  position: relative;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+.fcard-menu-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all .14s;
+  opacity: 0;
+  padding: 0;
+}
+/* Desktop: reveal on card hover OR when menu is open */
+.fcard:hover .fcard-menu-btn,
+.fcard-menu.open .fcard-menu-btn,
+.fcard.menu-active .fcard-menu-btn {
+  opacity: 1;
+}
+.fcard-menu-btn:hover {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--text);
+}
+.fcard-menu-btn svg { width: 18px; height: 18px; }
+
+/* Dropdown list */
+.fcard-menu-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 190px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
+  opacity: 0;
+  transform: translateY(-4px) scale(.96);
+  transform-origin: top right;
+  pointer-events: none;
+  transition: opacity .16s, transform .16s;
+  z-index: 80;
+}
+.fcard-menu.open .fcard-menu-list {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+.fcard-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  transition: background .12s, color .12s;
+  text-decoration: none;
+}
+.fcard-menu-item:hover { background: var(--surface-2); }
+.fcard-menu-item svg { width: 15px; height: 15px; opacity: .7; flex-shrink: 0; }
+.fcard-menu-item.danger { color: var(--danger); }
+.fcard-menu-item.danger:hover { background: var(--danger-soft); }
+.fcard-menu-item.danger svg { opacity: 1; }
+.fcard-menu-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 2px;
+}
+.fcard-menu-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: var(--text-3);
+  font-weight: 600;
+  padding: 6px 10px 2px;
+}
+
+/* ---------------------------------------------------------------------
+   MOBILE: menu button stays hidden until long-press
+   --------------------------------------------------------------------- */
+@media (hover: none), (max-width: 900px) {
+  .fcard-menu-btn { opacity: 0; pointer-events: none; }
+  .fcard.menu-active .fcard-menu-btn {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  /* On mobile, menu list becomes a centered modal-like sheet */
+  .fcard-menu-list {
+    position: fixed;
+    top: auto;
+    bottom: 20px;
+    left: 12px;
+    right: 12px;
+    min-width: 0;
+    border-radius: 16px;
+    transform: translateY(20px) scale(.98);
+    transform-origin: bottom center;
+    padding: 8px;
+    z-index: 200;
+  }
+  .fcard-menu.open .fcard-menu-list {
+    transform: translateY(0) scale(1);
+  }
+  .fcard-menu-item { padding: 12px 14px; font-size: 14px; }
+  .fcard-menu-item svg { width: 17px; height: 17px; }
+
+  /* Dim the background when menu open on mobile */
+  body.card-menu-open::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: rgba(6, 10, 20, .55);
+    backdrop-filter: blur(2px);
+    z-index: 150;
+    animation: fadeIn .15s ease;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   Card body
+   --------------------------------------------------------------------- */
+.fcard-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.fcard-name {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--text);
+  letter-spacing: -.15px;
+  line-height: 1.35;
+  margin-bottom: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+.fcard-meta {
+  font-size: 12px;
+  color: var(--text-3);
+  line-height: 1.5;
+  margin-top: auto;
+}
+.fcard-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.fcard-meta-row .sep { opacity: .45; }
+.fcard-chips {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.fcard-chips .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 7px;
+  background: var(--surface-2);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  border: 1px solid var(--border);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------------
+   Card action row (three primary buttons)
+   --------------------------------------------------------------------- */
+.fcard-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.fcard-actions .fbtn {
+  flex: 1;
+  justify-content: center;
+  min-width: 0;
+}
+
+.fbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-2);
+  cursor: pointer;
+  transition: all .14s ease;
+  font-family: inherit;
+  text-decoration: none;
+  line-height: 1;
+  white-space: nowrap;
+}
+.fbtn svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2;
+  flex-shrink: 0;
+}
+.fbtn:hover {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+.fbtn.primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  box-shadow: 0 2px 6px rgba(43,92,255,.22);
+}
+.fbtn.primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(43,92,255,.32);
+}
+.fbtn.download { background: var(--surface); color: var(--text); }
+.fbtn.download:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: rgba(43,92,255,.35);
+}
+.fbtn.share:hover {
+  background: rgba(15,118,110,.1);
+  color: #0f766e;
+  border-color: rgba(15,118,110,.35);
+}
+.fbtn.danger:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: rgba(220,38,38,.35);
+}
+.fbtn .label { display: inline; }
+@media (max-width: 500px) {
+  .fbtn .label { display: none; }
+  .fbtn { padding: 8px 10px; }
+}
+
+/* ---------------------------------------------------------------------
+   Select mode
+   --------------------------------------------------------------------- */
+.fcard-check {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  z-index: 5;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .16s;
+}
+body.select-mode .fcard-check {
+  opacity: 1;
+  pointer-events: auto;
+}
+body.select-mode .fcard-menu {
+  opacity: 0;
+  pointer-events: none;
+}
+.fcard-check input {
+  position: absolute;
+  opacity: 0;
+  width: 0; height: 0;
+  pointer-events: none;
+}
+.fcard-check span {
+  display: grid;
+  place-items: center;
+  width: 24px; height: 24px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  transition: all .16s ease;
+  font-size: 13px;
+  font-weight: 800;
+  color: transparent;
+  line-height: 1;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+.fcard-check:hover span { border-color: var(--accent); }
+.fcard-check input:checked + span {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.fcard-check input:checked + span::after { content: "✓"; }
+body.select-mode .fcard { cursor: default; }
+body.select-mode .fcard:hover { transform: none; }
+
+/* ---------------------------------------------------------------------
+   Version badge & count pill
+   --------------------------------------------------------------------- */
+.fcard-version {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--border);
+  opacity: 0;
+  transition: opacity .16s;
+}
+.fcard:hover .fcard-version { opacity: 1; }
+@media (hover: none) { .fcard-version { opacity: 1; } }
+
+.fcard-count {
+  min-width: 26px;
+  height: 26px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 11.5px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  opacity: 0;
+  transition: opacity .16s;
+}
+.fcard:hover .fcard-count { opacity: 1; }
+@media (hover: none) { .fcard-count { opacity: 1; } }
+
+/* ---------------------------------------------------------------------
+   Section header
+   --------------------------------------------------------------------- */
+.grid-section { margin-top: 24px; }
+.grid-section-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.grid-section-head h3 {
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 1.1px;
+  color: var(--text-3);
+  font-weight: 700;
+  margin: 0;
+}
+.grid-section-head .count {
+  font-size: 11px;
+  color: var(--text-3);
+  background: var(--surface-2);
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+}
+
+/* ---------------------------------------------------------------------
+   Selection bar
+   --------------------------------------------------------------------- */
+.sel-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translate(-50%, 120%);
+  background: #0d1326;
+  color: #fff;
+  border-radius: 14px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.4), 0 4px 12px rgba(0,0,0,.25);
+  z-index: 90;
+  transition: transform .26s cubic-bezier(.16,1,.3,1), opacity .2s;
+  opacity: 0;
+  pointer-events: none;
+  max-width: calc(100vw - 32px);
+  font-size: 13.5px;
+}
+.sel-bar.show {
+  transform: translate(-50%, 0);
+  opacity: 1;
+  pointer-events: auto;
+}
+.sel-count {
+  font-weight: 600;
+  padding-right: 14px;
+  border-right: 1px solid rgba(255,255,255,.14);
+  white-space: nowrap;
+}
+.sel-count b { color: #7a96ff; font-weight: 800; }
+.sel-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.sel-bar .btn {
+  background: rgba(255,255,255,.1);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.16);
+  padding: 6px 12px;
+  font-size: 12.5px;
+  box-shadow: none;
+}
+.sel-bar .btn:hover {
+  background: rgba(255,255,255,.2);
+  border-color: rgba(255,255,255,.28);
+  transform: none;
+}
+.sel-bar .btn.danger { background: #dc2626; border-color: #dc2626; }
+.sel-bar .btn.danger:hover { background: #b91c1c; border-color: #b91c1c; }
+.sel-bar .btn.ghost {
+  background: transparent;
+  border-color: transparent;
+  color: #aab3c8;
+}
+.sel-bar .btn.ghost:hover {
+  background: rgba(255,255,255,.08);
+  color: #fff;
+}
+@media (max-width: 900px) {
+  .sel-bar {
+    bottom: 84px;
+    left: 12px;
+    right: 12px;
+    transform: translate(0, 120%);
+    max-width: none;
+    justify-content: space-between;
+  }
+  .sel-bar.show { transform: translate(0, 0); }
+  .sel-actions .btn { padding: 6px 10px; font-size: 12px; }
+  .sel-count { padding-right: 10px; }
+}
+
+/* ---------------------------------------------------------------------
+   Share sheet
+   --------------------------------------------------------------------- */
+.share-back {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 10, 20, .7);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 200;
+  animation: fadeIn .16s ease;
+}
+.share-back.show { display: flex; }
+.share-sheet {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  max-width: 460px;
+  width: 100%;
+  box-shadow: var(--shadow-lg);
+  animation: pop .22s cubic-bezier(.16,1,.3,1);
+  overflow: hidden;
+}
+.share-sheet-head {
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.share-sheet-head h3 {
+  margin: 0;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.share-sheet-body { padding: 20px 22px; }
+.share-target {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.share-target .st-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.share-target .st-icon svg { width: 22px; height: 22px; }
+.share-target .st-meta { min-width: 0; flex: 1; }
+.share-target .st-meta b {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+.share-target .st-meta span { font-size: 11.5px; color: var(--text-3); }
+.share-link-row { display: flex; gap: 8px; margin-bottom: 16px; }
+.share-link-row input {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  font-size: 12.5px;
+  font-family: ui-monospace, monospace;
+  color: var(--text-2);
+  outline: none;
+}
+.share-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.share-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 6px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all .14s;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-decoration: none;
+}
+.share-opt:hover {
+  background: var(--surface);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-2px);
+}
+.share-opt .opt-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  font-size: 18px;
+}
+.share-opt svg { width: 20px; height: 20px; stroke-width: 1.75; }
+@media (max-width: 500px) {
+  .share-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pop {
+  from { opacity: 0; transform: translateY(10px) scale(.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
