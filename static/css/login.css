@@ -73,17 +73,25 @@ body.login-body {
   .lb-brand { margin-bottom: 32px; }
 }
 .lb-logo {
-  width: 44px;
-  height: 44px;
-  border-radius: 13px;
-  background: linear-gradient(135deg, #2b5cff, #7c3aed);
-  display: grid;
-  place-items: center;
-  color: #fff;
-  font-weight: 800;
-  font-size: 17px;
-  box-shadow: 0 8px 24px rgba(43,92,255,.35);
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #060b18;
+  border: 1.5px solid rgba(56, 189, 248, 0.5);
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.4), 0 4px 12px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  overflow: hidden;
+  padding: 1.5px;
+}
+.brand-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
 }
 .lb-brand-text b {
   display: block;
@@ -106,6 +114,32 @@ body.login-body {
   flex-direction: column;
   justify-content: center;
   max-width: 480px;
+}
+.lb-hero-badge {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: #060b18;
+  border: 2px solid rgba(56, 189, 248, 0.5);
+  box-shadow: 0 0 30px rgba(56, 189, 248, 0.4), 0 8px 24px rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 22px;
+  padding: 2.5px;
+  overflow: hidden;
+  animation: floatBadge 4s ease-in-out infinite alternate;
+}
+@keyframes floatBadge {
+  0% { transform: translateY(0); box-shadow: 0 0 25px rgba(56, 189, 248, 0.35); }
+  100% { transform: translateY(-4px); box-shadow: 0 0 35px rgba(56, 189, 248, 0.55); }
+}
+.lb-hero-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
 }
 .lb-hero h1 {
   font-size: 40px;
@@ -220,22 +254,34 @@ body.login-body {
 .login-panel .mobile-brand {
   display: none;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 28px;
+  gap: 12px;
+  margin-bottom: 24px;
 }
 @media (max-width: 900px) {
   .login-panel .mobile-brand { display: flex; }
 }
 .login-panel .mobile-brand .lb-logo {
-  width: 38px; height: 38px;
-  border-radius: 11px;
-  font-size: 15px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.mobile-brand-meta {
+  display: flex;
+  flex-direction: column;
 }
 .login-panel .mobile-brand b {
-  font-size: 15px;
+  font-size: 16px;
   color: var(--text);
-  font-weight: 700;
-  letter-spacing: -.2px;
+  font-weight: 750;
+  letter-spacing: -.3px;
+  line-height: 1.2;
+}
+.mobile-brand-sub {
+  font-size: 11.5px;
+  color: #64748b;
+  font-weight: 500;
+  margin-top: 1px;
 }
 
 .lp-header { margin-bottom: 26px; }
