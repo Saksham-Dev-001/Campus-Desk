@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}Bulk Import — CampusDesk{% endblock %}
+
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h1>📥 Bulk Student Import</h1>
+    <div class="sub">Upload a CSV to create or update student accounts in bulk</div>
+  </div>
+  <div class="actions">
+    <button class="btn" onclick="openImportModal()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      Upload CSV
+    </button>
+  </div>
+</div>
+
+{# ---------- Steps ---------- #}
+<div class="grid cols-3" style="margin-bottom:18px;">
+  <div class="card" style="padding:16px 18px;">
+    <div style="display:flex;gap:12px;align-items:flex-start;">
+      <div style="width:32px;height:32px;border-radius:9px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:800;font-size:13px;flex-shrink:0;">1</div>
+      <div>
+        <b style="display:block;font-size:13.5px;margin-bottom:3px;">Prepare CSV</b>
+        <span class="small muted">Header row + one row per student</span>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="padding:16px 18px;">
+    <div style="display:flex;gap:12px;align-items:flex-start;">
+      <div style="width:32px;height:32px;border-radius:9px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:800;font-size:13px;flex-shrink:0;">2</div>
+      <div>
+        <b style="display:block;font-size:13.5px;margin-bottom:3px;">Upload file</b>
+        <span class="small muted">Drag-drop or browse from device</span>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="padding:16px 18px;">
+    <div style="display:flex;gap:12px;align-items:flex-start;">
+      <div style="width:32px;height:32px;border-radius:9px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:800;font-size:13px;flex-shrink:0;">3</div>
+      <div>
+        <b style="display:block;font-size:13.5px;margin-bottom:3px;">Review report</b>
+        <span class="small muted">See created, updated, and errors</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ---------- Import report ---------- #}
+{% if report %}
+  <div class="card" style="margin-bottom:18px;">
+    <div class="card-head"><h2>📊 Import Report</h2></div>
+    <div class="grid cols-2" style="margin-bottom:14px;">
+      <div class="stat">
+        <div class="label">Created</div>
+        <div class="value" style="color:var(--success);">{{ report.created }}</div>
+        <div class="hint">New student accounts</div>
+      </div>
+      <div class="stat">
+        <div class="label">Updated</div>
+        <div class="value" style="color:var(--accent);">{{ report.updated }}</div>
+        <div class="hint">Existing accounts refreshed</div>
+      </div>
+    </div>
+    {% if report.errors %}
+      <h3 style="font-size:13px;color:var(--danger);margin:14px 0 8px;">⚠️ Errors ({{ report.errors|length }})</h3>
+      {% for e in report.errors %}
+        <div class="flash error" style="margin-bottom:6px;">{{ e }}</div>
+      {% endfor %}
+    {% else %}
+      <div class="flash success" style="margin-top:4px;">No errors. All rows processed successfully.</div>
+    {% endif %}
+  </div>
+{% endif %}
+
+{# ---------- Format table ---------- #}
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-head"><h2>📋 Required CSV Format</h2></div>
+  <div class="table-wrap">
+    <table class="table" style="font-size:13px;">
+      <thead>
+        <tr><th>Column</th><th>Required</th><th>Example</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>name</code></td><td><span class="badge success">Yes</span></td><td>Aarav Gupta</td></tr>
+        <tr><td><code>enrollment_number</code></td><td><span class="badge success">Yes</span></td><td>CSE2025001</td></tr>
+        <tr><td><code>course</code></td><td><span class="badge gray">Optional</span></td><td>B.Tech</td></tr>
+        <tr><td><code>branch</code></td><td><span class="badge gray">Optional</span></td><td>CSE</td></tr>
+        <tr><td><code>year</code></td><td><span class="badge gray">Optional</span></td><td>1st Year</td></tr>
+        <tr><td><code>semester</code></td><td><span class="badge gray">Optional</span></td><td>Sem 1</td></tr>
+        <tr><td><code>section</code></td><td><span class="badge gray">Optional</span></td><td>A</td></tr>
+        <tr><td><code>batch</code></td><td><span class="badge gray">Optional</span></td><td>A1</td></tr>
+        <tr><td><code>password</code></td><td><span class="badge gray">Optional</span></td><td>password123</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small muted" style="margin-top:12px;line-height:1.7;">
+    <b>Note:</b> Enrollment number is the unique identity — duplicate names are fine.
+    Re-importing the same enrollment number <b>updates</b> the existing student instead of duplicating.
+    Missing courses / branches / sections / batches are auto-created.
+  </p>
+</div>
+
+{# ---------- Sample ---------- #}
+<div class="card">
+  <div class="card-head">
+    <h2>📄 Sample CSV</h2>
+    <a class="btn outline sm" href="{{ url_for('static', filename='sample_students.csv') }}" download>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Download sample
+    </a>
+  </div>
+  <pre style="background:var(--surface-2);padding:14px 16px;border-radius:10px;font-size:12px;overflow:auto;color:var(--text-2);margin:0;line-height:1.7;">name,enrollment_number,course,branch,year,semester,section,batch,password
+Aarav Gupta,CSE2025001,B.Tech,CSE,1st Year,Sem 1,A,A1,password123
+Rohan Verma,CSE2025003,B.Tech,CSE,1st Year,Sem 1,A,A2,password123</pre>
+</div>
+
+{# ---------- Upload modal ---------- #}
+<div class="modal-back" id="importModal">
+  <form class="modal" method="post" enctype="multipart/form-data" style="max-width:520px;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="modal-head">
+      <h2>Upload Student CSV</h2>
+      <button type="button" class="btn ghost sm" onclick="closeImportModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="form-row">
+        <label>CSV File</label>
+        <label class="drop-zone">
+          <input type="file" name="csv" accept=".csv" required>
+          <div class="dz-empty">
+            <div class="dz-icon">📄</div>
+            <div class="dz-text">Drop your CSV here</div>
+            <div class="dz-hint">or <span class="dz-browse">browse files</span><br>
+              Max 25 MB · .csv only</div>
+          </div>
+          <div class="dz-progress"></div>
+        </label>
+      </div>
+
+      <div style="padding:12px 14px;background:var(--accent-soft);border-radius:10px;font-size:12.5px;line-height:1.6;color:var(--text-2);">
+        <b style="color:var(--accent);">💡 Tip:</b>
+        Required: <code>name</code>, <code>enrollment_number</code>.
+        Baaki optional — missing data auto-create ho jayega.
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn outline" onclick="closeImportModal()">Cancel</button>
+      <button class="btn" type="submit">Import Students</button>
+    </div>
+  </form>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openImportModal() {
+  var m = document.getElementById('importModal');
+  if (m) { m.classList.add('show'); document.body.style.overflow = 'hidden'; }
+}
+function closeImportModal() {
+  var m = document.getElementById('importModal');
+  if (m) { m.classList.remove('show'); document.body.style.overflow = ''; }
+}
+document.addEventListener('click', function (e) {
+  if (e.target && e.target.id === 'importModal') closeImportModal();
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') closeImportModal();
+});
+</script>
+{% endblock %}
