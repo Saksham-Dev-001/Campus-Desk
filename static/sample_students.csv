@@ -1,0 +1,9 @@
+name,enrollment_number,course,branch,year,semester,section,batch,password
+Aarav Gupta,CSE2025001,B.Tech,CSE,1st Year,Sem 1,A,A1,password123
+Diya Patel,CSE2025002,B.Tech,CSE,1st Year,Sem 1,A,A1,password123
+Rohan Verma,CSE2025003,B.Tech,CSE,1st Year,Sem 1,A,A2,password123
+Ishita Bose,CSE2025004,B.Tech,CSE,1st Year,Sem 1,A,A2,password123
+Kabir Malhotra,IT2025001,B.Tech,IT,1st Year,Sem 1,A,A1,password123
+Meera Joshi,ECE2025001,B.Tech,ECE,1st Year,Sem 1,A,A1,password123
+Aditya Rane,ME2025001,B.Tech,ME,1st Year,Sem 1,A,A1,password123
+Sneha Kulkarni,CE2025001,B.Tech,CE,1st Year,Sem 1,A,A1,password123
