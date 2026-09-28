@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Notifications — CampusDesk{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>🔔 Notifications</h1>
+    <div class="sub">
+      {% if unread %}<b>{{ unread }}</b> unread · {% endif %}Everything relevant to you
+    </div>
+  </div>
+  <div class="actions">
+    {% if notifications %}
+      <form method="post" action="{{ url_for('student.mark_all_read') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn outline">Mark all read</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+
+{% if notifications %}
+  <div class="grid" style="gap:8px;">
+    {% for n in notifications %}
+      <form method="post" action="{{ url_for('student.mark_read', nid=n.id) }}" style="display:contents;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="item"
+                style="width:100%;text-align:left;cursor:pointer;font-family:inherit;font-size:inherit;color:inherit;
+                       display:flex;gap:14px;align-items:flex-start;
+                       {% if not n.read %}border-left:3px solid var(--accent);background:var(--surface);{% else %}background:var(--surface);{% endif %}">
+          <div style="font-size:20px;line-height:1;flex-shrink:0;padding-top:2px;">
+            {% if n.kind == 'notice' %}📢
+            {% elif n.kind == 'assignment' %}📝
+            {% elif n.kind == 'material' %}📚
+            {% elif n.kind == 'timetable' %}📅
+            {% elif n.kind == 'grade' %}🏆
+            {% elif n.kind == 'submission' %}📥
+            {% else %}🔔{% endif %}
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div class="item-head" style="margin-bottom:4px;">
+              <div class="item-title">{{ n.title }}</div>
+              {% if not n.read %}<span class="badge">New</span>{% endif %}
+            </div>
+            {% if n.message %}<div class="item-desc">{{ n.message }}</div>{% endif %}
+            <div class="item-meta" style="margin-top:6px;">
+              <span>{{ n.created_at.strftime('%d %b %Y, %H:%M') }}</span>
+              <span class="badge gray">{{ n.kind }}</span>
+            </div>
+          </div>
+        </button>
+      </form>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card">
+    <div class="empty rich">
+      <div class="empty-illust">🔕</div>
+      <h3>All caught up</h3>
+      <p>You'll see notifications here when teachers publish notices, assignments, or study material for you.</p>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}
