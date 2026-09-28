@@ -1,5 +1,5 @@
-"""File manager - Study Material with multi-branch security & access control."""
 from datetime import datetime
+from services.time_utils import now_ist
 from io import BytesIO
 from urllib.parse import urlparse, urljoin
 from flask import (Blueprint, render_template, request, redirect, url_for,
@@ -378,7 +378,7 @@ def replace_file(fid):
     r.mime_type = f.mimetype
     r.size_bytes = len(data)
     r.version = (r.version or 1) + 1
-    r.updated_at = datetime.utcnow()
+    r.updated_at = now_ist()
     if "." not in (r.filename or "") and "." in orig:
         e = orig.rsplit(".", 1)[1].lower()
         if e in current_app.config["ALLOWED_EXTENSIONS"]:
