@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard — CampusDesk{% endblock %}
+
+{% block content %}
+
+<div class="hero">
+  <div>
+    <h1>System Administration</h1>
+    <div class="sub">Storage provider: <b>{{ provider|upper }}</b></div>
+  </div>
+</div>
+
+{# ---------- Users block ---------- #}
+<div class="grid-section" style="margin-top:6px;">
+  <div class="grid-section-head"><h3>Users</h3></div>
+  <div class="grid cols-4">
+    <div class="stat">
+      <div class="label">Users</div>
+      <div class="value">{{ stats.users }}</div>
+      <div class="hint">Total accounts</div>
+    </div>
+    <div class="stat">
+      <div class="label">Students</div>
+      <div class="value">{{ stats.students }}</div>
+      <div class="hint">Enrolled</div>
+    </div>
+    <div class="stat">
+      <div class="label">Teachers</div>
+      <div class="value">{{ stats.teachers }}</div>
+      <div class="hint">Faculty</div>
+    </div>
+    <div class="stat">
+      <div class="label">Branches</div>
+      <div class="value">{{ stats.branches }}</div>
+      <div class="hint">Active branches</div>
+    </div>
+  </div>
+</div>
+
+{# ---------- Content block ---------- #}
+<div class="grid-section">
+  <div class="grid-section-head"><h3>Content</h3></div>
+  <div class="grid cols-4">
+    <div class="stat">
+      <div class="label">Notices</div>
+      <div class="value">{{ stats.notices }}</div>
+      <div class="hint">Active</div>
+    </div>
+    <div class="stat">
+      <div class="label">Assignments</div>
+      <div class="value">{{ stats.assignments }}</div>
+      <div class="hint">Total</div>
+    </div>
+    <div class="stat">
+      <div class="label">Files</div>
+      <div class="value">{{ stats.files }}</div>
+      <div class="hint">Stored</div>
+    </div>
+    <div class="stat">
+      <div class="label">Pending Requests</div>
+      <div class="value">{{ stats.requests }}</div>
+      <div class="hint">Awaiting action</div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
