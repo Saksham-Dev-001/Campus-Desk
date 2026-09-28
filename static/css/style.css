@@ -159,6 +159,12 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  position: relative;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
@@ -206,6 +212,9 @@ code {
 .app {
   display: flex;
   min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .sidebar {
@@ -1281,20 +1290,40 @@ input[type=file] { font-size: 13px; color: var(--text-2); padding: 8px 0; }
   .sidebar-close { display: block; }
 
   /* Mobile Topbar */
-  .menu-btn { display: grid; }
-  .topbar { padding: 0 14px; gap: 10px; height: 60px; }
-  .topbar .search { max-width: none; }
-  .topbar .search input { padding: 8px 12px 8px 34px; font-size: 15px; }
-  .topbar .search svg { left: 10px; width: 15px; height: 15px; }
+  .menu-btn { display: grid; width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0; }
+  .topbar {
+    padding: 0 10px;
+    gap: 6px;
+    height: 56px;
+    width: 100%;
+    max-width: 100vw;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  .topbar .spacer { display: none !important; }
+  .topbar .create-btn { display: none !important; }
+  .topbar .search { flex: 1 1 0; min-width: 0; max-width: none; }
+  .topbar .search input {
+    padding: 6px 10px 6px 30px;
+    font-size: 16px !important;
+    height: 36px;
+    border-radius: 10px;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .topbar .search svg { left: 8px; width: 14px; height: 14px; }
   .topbar .search .kbd-hint { display: none; }
-  .user-chip { padding: 4px; background: transparent; border: none; gap: 0; }
+  .icon-btn { width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0; }
+  .user-chip { padding: 0; background: transparent; border: none; gap: 0; flex-shrink: 0; }
+  .user-chip .avatar { width: 34px; height: 34px; border-radius: 9px; font-size: 11.5px; }
   .user-meta { display: none; }
   .signout-btn { display: none !important; }
   .mobile-signout-btn {
     display: grid !important;
     place-items: center;
-    width: 38px;
-    height: 38px;
+    width: 36px;
+    height: 36px;
     border-radius: 10px;
     color: var(--danger);
     background: var(--danger-soft);
