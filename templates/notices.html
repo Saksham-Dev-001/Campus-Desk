@@ -230,13 +230,19 @@ function openEditAnn(id) {
   window.location.href = '/teacher/notices/' + id + '/edit';
 }
 
+function getCsrfToken() {
+  var meta = document.querySelector('meta[name="csrf-token"]');
+  if (meta && meta.content) return meta.content;
+  var inp = document.querySelector('input[name="csrf_token"]');
+  return inp ? inp.value : '';
+}
+
 function archiveAnn(id) {
   if (!confirm('Archive this announcement?\n\nIt will hide from students but stay in history.')) return;
   var f = document.createElement('form');
   f.method = 'POST';
   f.action = '/teacher/notices/' + id + '/archive';
-  var csrf = document.querySelector('input[name="csrf_token"]');
-  f.innerHTML = '<input type="hidden" name="csrf_token" value="' + (csrf ? csrf.value : '') + '">';
+  f.innerHTML = '<input type="hidden" name="csrf_token" value="' + getCsrfToken() + '">';
   document.body.appendChild(f);
   f.submit();
 }
@@ -246,8 +252,7 @@ function deleteAnn(id, name) {
   var f = document.createElement('form');
   f.method = 'POST';
   f.action = '/teacher/notices/' + id + '/delete';
-  var csrf = document.querySelector('input[name="csrf_token"]');
-  f.innerHTML = '<input type="hidden" name="csrf_token" value="' + (csrf ? csrf.value : '') + '">';
+  f.innerHTML = '<input type="hidden" name="csrf_token" value="' + getCsrfToken() + '">';
   document.body.appendChild(f);
   f.submit();
 }
