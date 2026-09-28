@@ -1,0 +1,645 @@
+{% extends "base.html" %}
+{% block title %}Users — CampusDesk{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/branch-picker.css') }}?v=1">
+
+<div class="page-head">
+  <div>
+    <h1>👥 Users</h1>
+    <div class="sub">Manage teachers, student admins and students</div>
+  </div>
+  <div class="actions">
+    <a href="{{ url_for('admin.export_users_csv') }}" class="btn outline">📥 Export Users</a>
+    <a href="{{ url_for('admin.export_students_csv') }}" class="btn outline">📥 Export Students</a>
+    <button class="btn" onclick="openModal('teacherModal')">+ Add Teacher</button>
+  </div>
+</div>
+
+{# ------------------------------------------------------------------
+   Teachers
+   ------------------------------------------------------------------ #}
+<div class="card" style="margin-bottom:18px;">
+  <div class="card-head">
+    <h2>Teachers ({{ teachers|length }})</h2>
+    {% if teachers %}
+      <div class="th-menu-wrap" id="thMenuWrap">
+        <button type="button" class="icon-btn" onclick="toggleTeacherMenu(event)" aria-label="More">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="1.4" fill="currentColor"/>
+            <circle cx="12" cy="5" r="1.4" fill="currentColor"/>
+            <circle cx="12" cy="19" r="1.4" fill="currentColor"/>
+          </svg>
+        </button>
+        <div class="th-menu-pop" id="teacherMenuPop">
+          <button type="button" class="th-menu-item" onclick="toggleTeacherSelect()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 11 12 14 22 4"/>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+            </svg>
+            <span id="th-menu-select-label">Select multiple</span>
+          </button>
+          <button type="button" class="th-menu-item" onclick="teacherSelectAll();closeTeacherMenu();">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Select all
+          </button>
+          <div class="th-menu-sep"></div>
+          <a class="th-menu-item" href="{{ url_for('admin.export_users_csv') }}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Export CSV
+          </a>
+          <div class="th-menu-sep"></div>
+          <button type="button" class="th-menu-item danger" onclick="teacherBulkDelete();">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+            Delete selected
+          </button>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+  {% if teachers %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th style="width:32px;" class="tch-check-cell"></th>
+            <th>Name</th>
+            <th>Teacher ID</th>
+            <th>Department</th>
+            <th>Branches</th>
+            <th>Subjects</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for t in teachers %}
+          <tr class="tch-row" data-uid="{{ t.user.id }}">
+            <td class="tch-check-cell">
+              <label class="tch-cb-wrap">
+                <input type="checkbox" class="tch-cb" value="{{ t.user.id }}"
+                       onchange="teacherSelectionChanged()">
+                <span></span>
+              </label>
+            </td>
+            <td>
+              <b>{{ t.user.name }}</b><br>
+              <span class="small muted">{{ t.user.username }}</span>
+            </td>
+            <td><span class="badge gray">{{ t.teacher_id }}</span></td>
+            <td>{{ t.department or '—' }}</td>
+            <td>
+              {% if t.is_global %}
+                <span class="badge success">🌐 All</span>
+              {% else %}
+                {% set ab = t.user.allowed_branch_ids() %}
+                {% if ab %}
+                  {% for bid in ab %}
+                    {% for b in all_branches_for_admin if b.id == bid %}
+                      <span class="badge gray">{{ b.code }}</span>
+                    {% endfor %}
+                  {% endfor %}
+                {% else %}
+                  <span class="badge danger">None</span>
+                {% endif %}
+              {% endif %}
+            </td>
+            <td>
+              {% if t.is_global %}
+                <span class="badge success">🌐 All</span>
+              {% else %}
+                {% set asubs = t.user.allowed_subjects() %}
+                {% if asubs %}
+                  <div style="display:flex;flex-wrap:wrap;gap:4px;max-width:240px;">
+                    {% for s in asubs %}
+                      <span class="badge blue" title="{{ s.name }}" style="font-size:11px;">{{ s.code or s.name }}</span>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <span class="badge danger">None</span>
+                {% endif %}
+              {% endif %}
+            </td>
+            <td>
+              {% if t.user.active %}
+                <span class="badge success">Active</span>
+              {% else %}
+                <span class="badge danger">Inactive</span>
+              {% endif %}
+            </td>
+            <td class="actions">
+              <button type="button" class="btn outline sm"
+                      data-uid="{{ t.user.id }}"
+                      data-name="{{ t.user.name|e }}"
+                      data-global="{{ 'true' if t.is_global else 'false' }}"
+                      data-ids="{{ t.user.allowed_branch_ids()|tojson|e }}"
+                      onclick="openBranchModal(this)">
+                🌿 Branches
+              </button>
+              <button type="button" class="btn outline sm"
+                      data-uid="{{ t.user.id }}"
+                      data-name="{{ t.user.name|e }}"
+                      data-ids="{{ t.user.allowed_subject_ids()|tojson|e }}"
+                      onclick="openSubjectModal(this)">
+                📚 Subjects
+              </button>
+              <form method="post" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="toggle_active">
+                <input type="hidden" name="user_id" value="{{ t.user.id }}">
+                <button class="btn outline sm">Toggle</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty"><h3>No teachers yet</h3></div>
+  {% endif %}
+</div>
+
+{# ------------------------------------------------------------------
+   Student Admins
+   ------------------------------------------------------------------ #}
+<div class="card" style="margin-bottom:18px;">
+  <div class="card-head"><h2>Student Admins ({{ student_admins|length }})</h2></div>
+  {% if student_admins %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Name</th><th>Enrollment</th><th>Branch</th><th></th></tr></thead>
+        <tbody>
+        {% for u in student_admins %}
+          <tr>
+            <td><b>{{ u.name }}</b></td>
+            <td>{{ u.student.enrollment_number if u.student else '—' }}</td>
+            <td>{{ u.student.branch.code if u.student and u.student.branch else '—' }}</td>
+            <td class="actions">
+              <form method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="promote_sa">
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <button class="btn outline sm">Demote</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty"><h3>No student admins</h3></div>
+  {% endif %}
+</div>
+
+{# ------------------------------------------------------------------
+   All Students
+   ------------------------------------------------------------------ #}
+<div class="card">
+  <div class="card-head"><h2>All Students ({{ students|length }})</h2></div>
+  {% if students %}
+    <div class="table-wrap" style="max-height:480px;overflow-y:auto;">
+      <table class="table">
+        <thead>
+          <tr><th>Enrollment</th><th>Name</th><th>Branch</th><th>Section</th><th>Batch</th><th>Role</th><th></th></tr>
+        </thead>
+        <tbody>
+        {% for s in students %}
+          <tr>
+            <td><span class="badge gray">{{ s.enrollment_number }}</span></td>
+            <td>{{ s.user.name }}</td>
+            <td>{{ s.branch.code if s.branch else '—' }}</td>
+            <td>{{ s.section.name if s.section else '—' }}</td>
+            <td>{{ s.batch.name if s.batch else '—' }}</td>
+            <td>{{ s.user.role.replace('_',' ')|title }}</td>
+            <td class="actions">
+              <form method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="promote_sa">
+                <input type="hidden" name="user_id" value="{{ s.user_id }}">
+                <button class="btn outline sm">
+                  {% if s.user.role == 'student_admin' %}Demote{% else %}Make Admin{% endif %}
+                </button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty"><h3>No students</h3></div>
+  {% endif %}
+</div>
+
+{# ==================================================================
+   Add Teacher modal — with compact branch picker
+   ================================================================== #}
+<div class="modal-back" id="teacherModal">
+  <form class="modal" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="create_teacher">
+    <div class="modal-head">
+      <h2>Add Teacher</h2>
+      <button type="button" class="btn ghost sm" onclick="closeModal('teacherModal')">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="form-row cols-2">
+        <div><label>Full Name</label><input type="text" name="name" required></div>
+        <div><label>Username</label><input type="text" name="username" required></div>
+      </div>
+      <div class="form-row cols-2">
+        <div><label>Teacher ID</label><input type="text" name="teacher_id" placeholder="e.g. TCH003"></div>
+        <div><label>Department</label><input type="text" name="department" placeholder="e.g. CSE"></div>
+      </div>
+      <div class="form-row"><label>Password</label><input type="password" name="password" required minlength="6"></div>
+
+      <div style="margin-top:20px;padding-top:18px;border-top:1px solid var(--border);">
+        <label class="bp-section">🌿 Branch Access</label>
+
+        <label class="bp-global">
+          <input type="checkbox" name="is_global" value="1" class="bp-global-cb" style="width:auto;margin-top:3px;">
+          <span>
+            <b>🌐 All branches (global access)</b><br>
+            <span class="small muted">Sabh branches mein content manage kar sakta hai.</span>
+          </span>
+        </label>
+
+        <div class="bp-wrap">
+          <label class="small muted" style="margin-bottom:6px;display:block;">Ya specific branches select karo:</label>
+          <div class="bp-picker" data-picker="add">
+            <div class="bp-input" onclick="bpToggle('add', event)">
+              <span class="bp-chips" id="bp-chips-add"></span>
+              <span class="bp-placeholder" id="bp-placeholder-add">Select branches…</span>
+              <span class="bp-caret">▾</span>
+            </div>
+            <div class="bp-pop" id="bp-pop-add">
+              <input type="text" class="bp-search" placeholder="🔍 Search branches…"
+                     oninput="bpFilter('add', this.value)">
+              <div class="bp-list" id="bp-list-add">
+                {% for b in all_branches_for_admin %}
+                  <label class="bp-option" data-code="{{ b.code }}" data-name="{{ b.name }}">
+                    <input type="checkbox" class="bp-cb" data-picker="add"
+                           name="branch_ids" value="{{ b.id }}"
+                           onchange="bpChange('add')">
+                    <span class="bp-badge">{{ b.code }}</span>
+                    <span class="bp-name">{{ b.name }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn outline" onclick="closeModal('teacherModal')">Cancel</button>
+      <button class="btn">Create Teacher</button>
+    </div>
+  </form>
+</div>
+
+{# ==================================================================
+   Edit Branches modal (for existing teachers)
+   ================================================================== #}
+<div class="modal-back" id="branchModal">
+  <form class="modal" method="post" id="branchForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="modal-head">
+      <h2>Edit Branches — <span id="branchTeacherName"></span></h2>
+      <button type="button" class="btn ghost sm" onclick="closeModal('branchModal')">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <label class="bp-global">
+        <input type="checkbox" name="is_global" value="1" class="bp-global-cb" id="editGlobal" style="width:auto;margin-top:3px;">
+        <span>
+          <b>🌐 All branches (global access)</b><br>
+          <span class="small muted">Sabh branches mein content manage kar sakta hai.</span>
+        </span>
+      </label>
+
+      <div class="bp-wrap" style="margin-top:14px;">
+        <label class="small muted" style="margin-bottom:6px;display:block;">Specific branches:</label>
+        <div class="bp-picker" data-picker="edit">
+          <div class="bp-input" onclick="bpToggle('edit', event)">
+            <span class="bp-chips" id="bp-chips-edit"></span>
+            <span class="bp-placeholder" id="bp-placeholder-edit">Select branches…</span>
+            <span class="bp-caret">▾</span>
+          </div>
+          <div class="bp-pop" id="bp-pop-edit">
+            <input type="text" class="bp-search" placeholder="🔍 Search branches…"
+                   oninput="bpFilter('edit', this.value)">
+            <div class="bp-list" id="bp-list-edit">
+              {% for b in all_branches_for_admin %}
+                <label class="bp-option" data-code="{{ b.code }}" data-name="{{ b.name }}">
+                  <input type="checkbox" class="bp-cb" data-picker="edit"
+                         name="branch_ids" value="{{ b.id }}"
+                         onchange="bpChange('edit')">
+                  <span class="bp-badge">{{ b.code }}</span>
+                  <span class="bp-name">{{ b.name }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn outline" onclick="closeModal('branchModal')">Cancel</button>
+      <button class="btn">Save Access</button>
+    </div>
+  </form>
+</div>
+
+{# ==================================================================
+   Edit Subjects modal (for assigned subjects)
+   ================================================================== #}
+<div class="modal-back" id="subjectModal">
+  <form class="modal" method="post" id="subjectForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="modal-head">
+      <h2>Assign Subjects — <span id="subjectTeacherName"></span></h2>
+      <button type="button" class="btn ghost sm" onclick="closeModal('subjectModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="small muted" style="margin-bottom:12px;">
+        Assign the specific subjects this teacher is responsible for. In the Study Material section, the teacher will only see folders for their assigned subjects.
+      </p>
+
+      <div class="bp-wrap" style="margin-top:8px;">
+        <label class="small muted" style="margin-bottom:6px;display:block;">Assigned Subjects:</label>
+        <div class="bp-picker" data-picker="subject">
+          <div class="bp-input" onclick="spToggle(event)">
+            <span class="bp-chips" id="sp-chips"></span>
+            <span class="bp-placeholder" id="sp-placeholder">Select subjects…</span>
+            <span class="bp-caret">▾</span>
+          </div>
+          <div class="bp-pop" id="sp-pop">
+            <input type="text" class="bp-search" id="sp-search" placeholder="🔍 Search subjects by name or code…"
+                   oninput="spFilter(this.value)">
+            <div class="bp-list" id="sp-list" style="max-height:240px;overflow-y:auto;">
+              {% for s in all_subjects_for_admin %}
+                <label class="bp-option sp-option" data-code="{{ s.code or '' }}" data-name="{{ s.name }}">
+                  <input type="checkbox" class="sp-cb"
+                         name="subject_ids" value="{{ s.id }}"
+                         onchange="spChange()">
+                  {% if s.code %}<span class="bp-badge" style="background:#e0e7ff;color:#3730a3;">{{ s.code }}</span>{% endif %}
+                  <span class="bp-name">{{ s.name }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn outline" onclick="closeModal('subjectModal')">Cancel</button>
+      <button class="btn">Save Assigned Subjects</button>
+    </div>
+  </form>
+</div>
+
+{# Teacher bulk-select bar #}
+<div class="sel-bar" id="teacherSelBar">
+  <div class="sel-count"><b id="teacherSelCount">0</b> selected</div>
+  <div class="sel-actions">
+    <button type="button" class="btn" onclick="teacherSelectAll()">Select all</button>
+    <button type="button" class="btn danger" onclick="teacherBulkDelete()">Delete</button>
+    <button type="button" class="btn ghost" onclick="exitTeacherSelect()">Cancel</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/teacher_bulk.js') }}?v=1"></script>
+<script>
+/* =====================================================================
+   Compact branch picker
+   ===================================================================== */
+
+/* ---- Toggle popover ---- */
+function bpToggle(key, event) {
+  if (event) event.stopPropagation();
+  var picker = document.querySelector('.bp-picker[data-picker="' + key + '"]');
+  if (!picker) return;
+  var wasOpen = picker.classList.contains('open');
+  document.querySelectorAll('.bp-picker.open').forEach(function (p) {
+    p.classList.remove('open');
+  });
+  if (!wasOpen) {
+    picker.classList.add('open');
+    var s = picker.querySelector('.bp-search');
+    if (s) { s.value = ''; bpFilter(key, ''); setTimeout(function () { s.focus(); }, 40); }
+  }
+}
+
+/* Close on outside click */
+document.addEventListener('click', function (e) {
+  if (!e.target.closest || !e.target.closest('.bp-picker')) {
+    document.querySelectorAll('.bp-picker.open').forEach(function (p) {
+      p.classList.remove('open');
+    });
+  }
+});
+
+/* Esc to close */
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.bp-picker.open').forEach(function (p) {
+      p.classList.remove('open');
+    });
+  }
+});
+
+/* ---- Search filter inside dropdown ---- */
+function bpFilter(key, q) {
+  q = (q || '').trim().toLowerCase();
+  document.querySelectorAll('#bp-list-' + key + ' .bp-option').forEach(function (opt) {
+    var code = (opt.dataset.code || '').toLowerCase();
+    var name = (opt.dataset.name || '').toLowerCase();
+    var match = !q || code.indexOf(q) !== -1 || name.indexOf(q) !== -1;
+    opt.style.display = match ? '' : 'none';
+  });
+}
+
+/* ---- Rebuild chips when selection changes ---- */
+function bpChange(key) {
+  var chips = document.getElementById('bp-chips-' + key);
+  var ph = document.getElementById('bp-placeholder-' + key);
+  if (!chips || !ph) return;
+
+  chips.innerHTML = '';
+  var any = false;
+
+  document.querySelectorAll('#bp-list-' + key + ' .bp-cb').forEach(function (cb) {
+    if (!cb.checked) return;
+    any = true;
+    var opt = cb.closest('.bp-option');
+    var code = opt ? (opt.dataset.code || '?') : '?';
+
+    var chip = document.createElement('span');
+    chip.className = 'bp-chip';
+    chip.innerHTML = '<span>' + code + '</span><button type="button" aria-label="Remove">×</button>';
+    chip.querySelector('button').addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      cb.checked = false;
+      bpChange(key);
+    });
+    chips.appendChild(chip);
+  });
+
+  ph.style.display = any ? 'none' : '';
+}
+
+/* ---- Global checkbox toggles the specific picker ---- */
+document.addEventListener('change', function (e) {
+  var cb = e.target;
+  if (!cb || !cb.classList.contains('bp-global-cb')) return;
+
+  var form = cb.closest('form');
+  if (!form) return;
+  var picker = form.querySelector('.bp-picker');
+  if (!picker) return;
+
+  var key = picker.dataset.picker;
+  if (cb.checked) {
+    picker.classList.add('disabled');
+    picker.querySelector('.bp-input').style.opacity = '.5';
+    picker.querySelector('.bp-input').style.pointerEvents = 'none';
+  } else {
+    picker.classList.remove('disabled');
+    picker.querySelector('.bp-input').style.opacity = '';
+    picker.querySelector('.bp-input').style.pointerEvents = '';
+  }
+});
+
+/* =====================================================================
+   Subject picker & modal
+   ===================================================================== */
+function spToggle(event) {
+  if (event) event.stopPropagation();
+  var picker = document.querySelector('.bp-picker[data-picker="subject"]');
+  if (!picker) return;
+  var wasOpen = picker.classList.contains('open');
+  document.querySelectorAll('.bp-picker.open').forEach(function (p) {
+    p.classList.remove('open');
+  });
+  if (!wasOpen) {
+    picker.classList.add('open');
+    var s = document.getElementById('sp-search');
+    if (s) { s.value = ''; spFilter(''); setTimeout(function () { s.focus(); }, 40); }
+  }
+}
+
+function spFilter(q) {
+  q = (q || '').trim().toLowerCase();
+  document.querySelectorAll('#sp-list .sp-option').forEach(function (opt) {
+    var code = (opt.dataset.code || '').toLowerCase();
+    var name = (opt.dataset.name || '').toLowerCase();
+    var match = !q || code.indexOf(q) !== -1 || name.indexOf(q) !== -1;
+    opt.style.display = match ? '' : 'none';
+  });
+}
+
+function spChange() {
+  var chips = document.getElementById('sp-chips');
+  var ph = document.getElementById('sp-placeholder');
+  if (!chips || !ph) return;
+
+  chips.innerHTML = '';
+  var any = false;
+
+  document.querySelectorAll('#sp-list .sp-cb').forEach(function (cb) {
+    if (!cb.checked) return;
+    any = true;
+    var opt = cb.closest('.sp-option');
+    var label = opt ? (opt.dataset.code || opt.dataset.name) : '?';
+
+    var chip = document.createElement('span');
+    chip.className = 'bp-chip';
+    chip.innerHTML = '<span>' + label + '</span><button type="button" aria-label="Remove">×</button>';
+    chip.querySelector('button').addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      cb.checked = false;
+      spChange();
+    });
+    chips.appendChild(chip);
+  });
+
+  ph.style.display = any ? 'none' : '';
+}
+
+function openSubjectModal(btn) {
+  var uid = btn.dataset.uid;
+  var name = btn.dataset.name;
+  var ids = [];
+  try { ids = JSON.parse(btn.dataset.ids || '[]'); } catch (e) {}
+
+  var form = document.getElementById('subjectForm');
+  form.action = '/admin/teachers/' + uid + '/subjects';
+  document.getElementById('subjectTeacherName').textContent = name;
+
+  document.querySelectorAll('#sp-list .sp-cb').forEach(function (cb) {
+    cb.checked = ids.indexOf(parseInt(cb.value, 10)) !== -1;
+  });
+  spChange();
+  openModal('subjectModal');
+}
+
+/* =====================================================================
+   Edit Branches modal opener
+   ===================================================================== */
+function openBranchModal(btn) {
+  var uid = btn.dataset.uid;
+  var name = btn.dataset.name;
+  var isGlobal = btn.dataset.global === 'true';
+  var ids = [];
+  try { ids = JSON.parse(btn.dataset.ids || '[]'); } catch (e) {}
+
+  var form = document.getElementById('branchForm');
+  form.action = '/admin/teachers/' + uid + '/branches';
+  document.getElementById('branchTeacherName').textContent = name;
+
+  var gcb = document.getElementById('editGlobal');
+  gcb.checked = !!isGlobal;
+
+  // Set checkboxes
+  document.querySelectorAll('#bp-list-edit .bp-cb').forEach(function (cb) {
+    cb.checked = ids.indexOf(parseInt(cb.value, 10)) !== -1;
+  });
+  bpChange('edit');
+
+  // Trigger global toggle effect
+  var picker = document.querySelector('.bp-picker[data-picker="edit"]');
+  var input = picker.querySelector('.bp-input');
+  if (isGlobal) {
+    input.style.opacity = '.5';
+    input.style.pointerEvents = 'none';
+  } else {
+    input.style.opacity = '';
+    input.style.pointerEvents = '';
+  }
+
+  openModal('branchModal');
+}
+
+/* ---- Init on load ---- */
+document.addEventListener('DOMContentLoaded', function () {
+  bpChange('add');
+  bpChange('edit');
+});
+</script>
+{% endblock %}
