@@ -84,6 +84,26 @@ def create_app():
         methods=["GET"],
     )
 
+    @app.route("/_debug_db")
+    def debug_db():
+        import os
+        from models import User
+        try:
+            db_url = app.config.get("SQLALCHEMY_DATABASE_URI", "NOT SET")
+            masked = db_url[:30] + "..." if len(db_url) > 30 else db_url
+            user_count = User.query.count()
+            admin = User.query.filter_by(username="admin").first()
+            pw_ok = admin.check_password("password123") if admin else False
+            return {
+                "db_url_prefix": masked,
+                "user_count": user_count,
+                "admin_exists": admin is not None,
+                "admin_pw_check": pw_ok,
+                "werkzeug_version": __import__("werkzeug").__version__,
+            }
+        except Exception as e:
+            return {"error": str(e)}, 500
+
     @app.route("/")
     def index():
         if not current_user.is_authenticated:
