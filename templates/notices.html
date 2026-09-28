@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+{% block title %}Announcements — CampusDesk{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/notices.css') }}?v=3">
+
+<div class="page-head">
+  <div>
+    <h1>📢 Announcements</h1>
+    <div class="sub">
+      {% if mode == 'teacher' %}Share updates with your students{% else %}Announcements from your teachers{% endif %}
+    </div>
+  </div>
+  {% if mode == 'teacher' %}
+    <div class="actions">
+      <button class="btn" onclick="openModal('noticeModal')">+ New Announcement</button>
+    </div>
+  {% endif %}
+</div>
+
+{% if notices %}
+  <div class="ann-grid">
+    {% for n in notices %}
+      {% set p = n.priority if n.priority else 'normal' %}
+      {% set has_img = n.attachment is not none %}
+      {% set initials = n.author.name[:1]|upper if n.author else '?' %}
+
+      <article class="ann-card priority-{{ p }}{% if not has_img %} no-image{% endif %}"
+               data-notice-id="{{ n.id }}">
+
+        {# ---- Header ---- #}
+        <header class="ann-head">
+          <div class="ann-avatar" data-color="{{ n.author.avatar_color if n.author else '' }}">{{ initials }}</div>
+          <div class="ann-meta">
+            <b>{{ n.author.name if n.author else 'System' }}</b>
+            <span>{{ n.publish_date.strftime('%d %b %Y · %H:%M') }}</span>
+          </div>
+          <span class="ann-priority {{ p }}">
+            {% if p == 'urgent' %}⚠{% elif p == 'important' %}ⓘ{% else %}📢{% endif %}
+            {{ p|title }}
+          </span>
+
+          {% if mode == 'teacher' %}
+            <div class="ann-menu-wrap">
+              <button type="button" class="ann-menu-btn" onclick="toggleAnnMenu(this, event)">⋮</button>
+              <div class="ann-menu">
+                <button type="button" class="ann-menu-item"
+                        onclick="openEditAnn({{ n.id }})">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/>
+                  </svg>
+                  Edit
+                </button>
+                <button type="button" class="ann-menu-item"
+                        onclick="archiveAnn({{ n.id }})">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="21 8 21 21 3 21 3 8"/>
+                    <rect x="1" y="3" width="22" height="5"/>
+                    <line x1="10" y1="12" x2="14" y2="12"/>
+                  </svg>
+                  Archive
+                </button>
+                <div class="ann-menu-sep"></div>
+                <button type="button" class="ann-menu-item danger"
+                        onclick="deleteAnn({{ n.id }}, '{{ n.title|e }}')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  </svg>
+                  Delete permanently
+                </button>
+              </div>
+            </div>
+          {% endif %}
+        </header>
+
+        {# ---- Body ---- #}
+        <div class="ann-body">
+          {% if has_img %}
+            <div class="ann-image">
+              <img src="{{ url_for('api.file_preview', fid=n.attachment.id) }}"
+                   alt="{{ n.title }}" loading="lazy">
+              <button type="button" class="ann-image-btn"
+                      onclick="openAnnLightbox('{{ url_for('api.file_preview', fid=n.attachment.id) }}')"></button>
+            </div>
+          {% endif %}
+          <div class="ann-caption">
+            <div class="ann-title">{{ n.title }}</div>
+            {% if n.description %}<div class="ann-text">{{ n.description }}</div>{% endif %}
+            {% if mode == 'teacher' %}
+              {% if n.branch or n.year or n.section or n.batch or n.course %}
+                <div class="ann-chips">
+                  <span class="chip">
+                    🎯
+                    {% if n.branch %}{{ n.branch.code }}{% else %}All branches{% endif %}
+                    {% if n.year %} · {{ n.year.name }}{% endif %}
+                    {% if n.section %} · Sec {{ n.section.name }}{% endif %}
+                    {% if n.batch %} · {{ n.batch.name }}{% endif %}
+                  </span>
+                </div>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+
+        {# ---- Footer ---- #}
+        <footer class="ann-foot">
+          <span class="fi">⏱ {{ n.publish_date.strftime('%d %b %Y') }}</span>
+          {% if has_img %}<span class="fi">🖼 Photo</span>{% endif %}
+        </footer>
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="ann-empty">
+    <div class="empty-illust">📢</div>
+    <h3>No announcements yet</h3>
+    <p>
+      {% if mode == 'teacher' %}Publish your first update.{% else %}You're all caught up.{% endif %}
+    </p>
+    {% if mode == 'teacher' %}
+      <button class="btn" onclick="openModal('noticeModal')">+ New Announcement</button>
+    {% endif %}
+  </div>
+{% endif %}
+
+{# ---- Lightbox ---- #}
+<div class="ann-lightbox" id="annLightbox" onclick="closeAnnLightbox()">
+  <button type="button" class="ann-lightbox-close" onclick="closeAnnLightbox()">✕</button>
+  <img id="annLightboxImg" src="" alt="Preview">
+</div>
+
+{# ================================================================
+   Create modal
+   ================================================================ #}
+{% if mode == 'teacher' %}
+<div class="modal-back" id="noticeModal">
+  <form class="modal" method="post" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="modal-head">
+      <h2>New Announcement</h2>
+      <button type="button" class="btn ghost sm" onclick="closeModal('noticeModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>Title</label>
+        <input type="text" name="title" placeholder="Short headline" maxlength="200">
+      </div>
+      <div class="form-row">
+        <label>Caption / Details</label>
+        <textarea name="description" placeholder="Write the message…" rows="4"></textarea>
+      </div>
+      <div class="form-row">
+        <label>Image (optional)</label>
+        <label class="drop-zone">
+          <input type="file" name="image" accept=".png,.jpg,.jpeg,.webp,.gif">
+          <div class="dz-empty">
+            <div class="dz-icon">🖼️</div>
+            <div class="dz-text">Drop an image here</div>
+            <div class="dz-hint">or <span class="dz-browse">browse files</span><br>
+              PNG · JPG · WEBP · GIF — up to 25 MB</div>
+          </div>
+        </label>
+      </div>
+      <div class="form-row cols-2">
+        <div>
+          <label>Priority</label>
+          <select name="priority">
+            <option value="normal">Normal</option>
+            <option value="important">Important</option>
+            <option value="urgent">Urgent</option>
+          </select>
+        </div>
+        <div><label>Publish Time</label><input type="datetime-local" name="publish_date"></div>
+      </div>
+      <div class="form-row" style="margin-bottom:0;">
+        <label style="margin-bottom:8px;">Target Audience</label>
+        {% include "_targeting_fields.html" %}
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn outline" onclick="closeModal('noticeModal')">Cancel</button>
+      <button class="btn">Publish</button>
+    </div>
+  </form>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  // Apply avatar colors
+  document.querySelectorAll('.ann-avatar[data-color]').forEach(function (el) {
+    var c = el.dataset.color;
+    if (c) el.style.backgroundImage = c;
+  });
+})();
+
+/* 3-dot menu */
+function toggleAnnMenu(btn, e) {
+  if (e) { e.stopPropagation(); }
+  var wrap = btn.closest('.ann-menu-wrap');
+  var wasOpen = wrap.classList.contains('open');
+  document.querySelectorAll('.ann-menu-wrap.open').forEach(function (m) {
+    m.classList.remove('open');
+  });
+  if (!wasOpen) wrap.classList.add('open');
+}
+document.addEventListener('click', function (e) {
+  if (!e.target.closest || !e.target.closest('.ann-menu-wrap')) {
+    document.querySelectorAll('.ann-menu-wrap.open').forEach(function (m) {
+      m.classList.remove('open');
+    });
+  }
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.ann-menu-wrap.open').forEach(function (m) {
+      m.classList.remove('open');
+    });
+    closeAnnLightbox();
+  }
+});
+
+/* Actions */
+function openEditAnn(id) {
+  window.location.href = '/teacher/notices/' + id + '/edit';
+}
+
+function archiveAnn(id) {
+  if (!confirm('Archive this announcement?\n\nIt will hide from students but stay in history.')) return;
+  var f = document.createElement('form');
+  f.method = 'POST';
+  f.action = '/teacher/notices/' + id + '/archive';
+  var csrf = document.querySelector('input[name="csrf_token"]');
+  f.innerHTML = '<input type="hidden" name="csrf_token" value="' + (csrf ? csrf.value : '') + '">';
+  document.body.appendChild(f);
+  f.submit();
+}
+
+function deleteAnn(id, name) {
+  if (!confirm('Delete "' + name + '" permanently?\n\nThis removes the announcement AND its attached image. Cannot be undone.')) return;
+  var f = document.createElement('form');
+  f.method = 'POST';
+  f.action = '/teacher/notices/' + id + '/delete';
+  var csrf = document.querySelector('input[name="csrf_token"]');
+  f.innerHTML = '<input type="hidden" name="csrf_token" value="' + (csrf ? csrf.value : '') + '">';
+  document.body.appendChild(f);
+  f.submit();
+}
+
+/* Lightbox */
+function openAnnLightbox(url) {
+  var lb = document.getElementById('annLightbox');
+  var img = document.getElementById('annLightboxImg');
+  if (!lb || !img) return;
+  img.src = url;
+  lb.classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+function closeAnnLightbox() {
+  var lb = document.getElementById('annLightbox');
+  if (!lb) return;
+  lb.classList.remove('show');
+  document.getElementById('annLightboxImg').src = '';
+  document.body.style.overflow = '';
+}
+</script>
+{% endblock %}
