@@ -1,0 +1,806 @@
+{% extends "base.html" %}
+{% block title %}Timetable — CampusDesk{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/timetable.css') }}?v=6">
+
+<style>
+/* ---------- Official timetable card grid ---------- */
+.ot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  margin-top: 6px;
+}
+@media (max-width: 900px) {
+  .ot-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+}
+@media (max-width: 600px) {
+  .ot-grid { grid-template-columns: 1fr; gap: 10px; }
+}
+
+.ot-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: transform .18s, box-shadow .22s, border-color .2s;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.ot-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md), 0 12px 30px rgba(15,23,42,.08);
+  border-color: var(--border-strong);
+}
+
+/* Thumbnail / preview zone */
+.ot-thumb {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: linear-gradient(160deg, var(--surface-2) 0%, var(--surface-3) 100%);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+}
+.ot-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.ot-thumb-icon {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: var(--text-3);
+}
+.ot-thumb-icon svg {
+  width: 64px;
+  height: 64px;
+  stroke-width: 1.4;
+}
+.ot-thumb-icon.pdf { color: #dc2626; }
+.ot-thumb-icon.img { color: #7c3aed; }
+.ot-thumb-btn {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  transition: background .18s;
+}
+.ot-thumb-btn:hover {
+  background: rgba(0, 0, 0, .15);
+}
+.ot-thumb-btn::after {
+  content: "👁 Preview";
+  background: rgba(13, 19, 38, .85);
+  color: #fff;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity .18s;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.ot-thumb-btn:hover::after { opacity: 1; }
+
+/* Meta zone */
+.ot-body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+.ot-name {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--text);
+  letter-spacing: -.1px;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+.ot-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+.ot-meta .sep { opacity: .5; }
+
+/* Action row */
+.ot-actions {
+  display: flex;
+  gap: 6px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.ot-actions .ot-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all .14s;
+  text-decoration: none;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  min-width: 0;
+}
+.ot-actions .ot-btn:hover {
+  background: var(--surface-3);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.ot-actions .ot-btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.ot-actions .ot-btn.primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+.ot-actions .ot-btn.share:hover {
+  background: rgba(15,118,110,.12);
+  color: #0f766e;
+  border-color: rgba(15,118,110,.3);
+}
+.ot-actions .ot-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+@media (max-width: 500px) {
+  .ot-actions .ot-btn .label { display: none; }
+  .ot-actions .ot-btn { padding: 9px; }
+}
+
+/* 3-dot menu on the card */
+.ot-menu-wrap {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+}
+.ot-menu-btn {
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.92);
+  color: var(--text-2);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  padding: 0;
+  transition: all .14s;
+  opacity: 0;
+  backdrop-filter: blur(6px);
+}
+[data-theme="dark"] .ot-menu-btn {
+  background: rgba(19,24,38,.92);
+}
+.ot-card:hover .ot-menu-btn,
+.ot-menu-wrap.open .ot-menu-btn {
+  opacity: 1;
+}
+@media (hover: none) { .ot-menu-btn { opacity: 1; } }
+.ot-menu-btn:hover {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.ot-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 170px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
+  opacity: 0;
+  transform: translateY(-4px) scale(.96);
+  transform-origin: top right;
+  pointer-events: none;
+  transition: opacity .16s, transform .16s;
+  z-index: 10;
+}
+.ot-menu-wrap.open .ot-menu {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+.ot-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  transition: background .12s;
+  text-decoration: none;
+}
+.ot-menu-item:hover { background: var(--surface-2); }
+.ot-menu-item svg { width: 14px; height: 14px; opacity: .7; flex-shrink: 0; }
+.ot-menu-item.danger { color: var(--danger); }
+.ot-menu-item.danger:hover { background: var(--danger-soft); }
+.ot-menu-item.danger svg { opacity: 1; }
+
+/* Empty state */
+.ot-empty {
+  background: var(--surface);
+  border: 1px dashed var(--border-strong);
+  border-radius: 16px;
+  padding: 60px 24px;
+  text-align: center;
+}
+.ot-empty .icon {
+  font-size: 48px;
+  opacity: .4;
+  margin-bottom: 12px;
+}
+.ot-empty h3 {
+  font-size: 16px;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.ot-empty p {
+  font-size: 13px;
+  color: var(--text-2);
+  max-width: 380px;
+  margin: 0 auto 18px;
+  line-height: 1.6;
+}
+</style>
+
+<div class="page-head">
+  <div>
+    <h1>📅 Timetable</h1>
+    <div class="sub">
+      {% if mode == 'teacher' %}Manage class schedule{% else %}Your schedule, live{% endif %}
+    </div>
+  </div>
+  {% if mode == 'teacher' %}
+    <div class="actions">
+      <button class="btn outline" onclick="openModal('officialModal')">📄 Upload PDF / Image</button>
+      <button class="btn outline" onclick="openModal('bulkModal')">⚡ Bulk Import</button>
+      <button class="btn" onclick="openModal('ttModal')">+ Add One</button>
+    </div>
+  {% endif %}
+</div>
+
+{# Teacher Scope Bar #}
+{% if mode == 'teacher' %}
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <span style="font-weight:600;font-size:13.5px;color:var(--text);margin-right:4px;">Schedule View:</span>
+      <a href="{{ url_for('teacher.timetable', scope='my', day=selected_day) }}"
+         class="btn sm {{ 'primary' if scope == 'my' else 'outline' }}" style="padding:6px 14px;">
+        👤 My Teaching Schedule ({{ my_lectures_count }})
+      </a>
+      <a href="{{ url_for('teacher.timetable', scope='all', day=selected_day) }}"
+         class="btn sm {{ 'primary' if scope == 'all' else 'outline' }}" style="padding:6px 14px;">
+        🏛️ All Branch Timetable
+      </a>
+    </div>
+    {% if scope == 'all' %}
+      <form method="get" action="{{ url_for('teacher.timetable') }}" style="display:flex;align-items:center;gap:6px;">
+        <input type="hidden" name="scope" value="all">
+        <input type="hidden" name="day" value="{{ selected_day }}">
+        <select name="branch_id" onchange="this.form.submit()" style="padding:6px 12px;font-size:12.5px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);">
+          <option value="">All Branches</option>
+          {% for b in branches %}
+            <option value="{{ b.id }}" {% if selected_branch == b.id %}selected{% endif %}>{{ b.code }} — {{ b.name }}</option>
+          {% endfor %}
+        </select>
+      </form>
+    {% endif %}
+  </div>
+{% endif %}
+
+{# Tabs #}
+<div class="tt-tabs" role="tablist">
+  <button class="tt-tab active" data-view="live" onclick="switchView('live')">
+    🕐 Schedule Roadmap
+  </button>
+  <button class="tt-tab" data-view="week" onclick="switchView('week')">
+    📅 Full Week Grid
+  </button>
+  <button class="tt-tab" data-view="official" onclick="switchView('official')">
+    📄 Official Timetable
+    {% if official_files %}<span class="tt-tab-dot"></span>{% endif %}
+  </button>
+</div>
+
+{# ================================================================
+   VIEW 1: LIVE ROADMAP
+   ================================================================ #}
+<div id="view-live" class="tt-view">
+  <div class="live-head">
+    <div class="live-head-row">
+      <div class="lh-left">
+        <h1>
+          {% if selected_day == today_short %}
+            {{ today_name }} (Today)
+          {% else %}
+            {{ DAY_NAMES.get({'Mon':0,'Tue':1,'Wed':2,'Thu':3,'Fri':4,'Sat':5}[selected_day])[0] if selected_day in ('Mon','Tue','Wed','Thu','Fri','Sat') else selected_day }}
+          {% endif %}
+        </h1>
+        <div class="date">📅 {{ today_date }} · Showing {{ today_entries|length }} lecture{{ '' if today_entries|length == 1 else 's' }}</div>
+      </div>
+      <div class="live-clock">
+        <span class="time" id="clockTime">--:--</span>
+        <span class="ampm" id="clockAmPm">--</span>
+        <span class="sec" id="clockSec">:--</span>
+      </div>
+    </div>
+    <div class="live-status" id="liveStatus">
+      <div class="ls-icon" id="liveStatusIcon">⏳</div>
+      <div class="ls-body">
+        <b id="liveStatusTitle">Loading…</b>
+        <span id="liveStatusSub"></span>
+      </div>
+    </div>
+  </div>
+
+  {# Day Selector Pills #}
+  <div style="display:flex;align-items:center;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;">
+    {% for d in days %}
+      <a href="{{ url_for(request.endpoint, scope=scope, day=d, branch_id=selected_branch or '') }}"
+         class="btn sm {{ 'primary' if selected_day == d else 'outline' }}"
+         style="padding:6px 14px;border-radius:20px;font-size:12.5px;">
+        {% if d == today_short %}● Today ({{ d }}){% else %}{{ d }}{% endif %}
+      </a>
+    {% endfor %}
+  </div>
+
+  {% if today_entries %}
+    <div class="tt-roadmap" id="roadmap">
+      {% for e in today_entries %}
+        <div class="tt-node" data-start="{{ e.start_time }}" data-end="{{ e.end_time }}">
+          <div class="tt-card">
+            <div class="tt-card-head">
+              <div class="tt-card-title">
+                {% if e.subject %}
+                  {{ e.subject.name }}
+                  {% if e.subject.code %}<span class="badge blue" style="font-size:11px;padding:2px 7px;vertical-align:middle;">{{ e.subject.code }}</span>{% endif %}
+                {% else %}
+                  Class
+                {% endif %}
+              </div>
+              <div class="tt-card-time">{{ e.start_time }} – {{ e.end_time }}</div>
+            </div>
+            <div class="tt-card-meta" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">
+              {% if e.room %}<span class="badge gray">📍 {{ e.room }}</span>{% endif %}
+              {% if e.branches %}
+                <span class="badge gray">🎓 {{ e.branches|join(', ') }}{% if e.section %} · Sec {{ e.section }}{% endif %}{% if e.batch %} · Batch {{ e.batch }}{% endif %}</span>
+              {% endif %}
+              {% if (mode != 'teacher' or scope == 'all') and e.teacher and e.teacher.user %}
+                <span class="badge gray">👤 {{ e.teacher.user.name }}</span>
+              {% endif %}
+            </div>
+            <div class="tt-progress" style="display:none;"><div class="tt-progress-fill"></div></div>
+            <div class="tt-progress-label" style="display:none;">
+              <span class="elapsed"></span><span class="remaining"></span>
+            </div>
+            {% if mode == 'teacher' %}
+              <form method="post" action="{{ url_for('teacher.delete_timetable', eid=e.id) }}"
+                    class="tt-remove" onsubmit="return confirm('Delete this entry?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn danger sm">Remove</button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="tt-empty-day">
+      <div class="big">🎉</div>
+      <h3>No lectures on {{ selected_day }}</h3>
+      <p>{% if mode == 'teacher' %}You have no scheduled classes for this day.{% else %}You're free on this day.{% endif %}</p>
+    </div>
+  {% endif %}
+</div>
+
+{# ================================================================
+   VIEW 3: FULL WEEK GRID
+   ================================================================ #}
+<div id="view-week" class="tt-view" style="display:none;">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:16px;">
+    {% for d in days %}
+      {% set day_classes = grid.get(d, []) %}
+      <div class="card" style="padding:16px;{% if d == today_short %}border:2px solid var(--accent);box-shadow:var(--shadow-sm);{% endif %}">
+        <div class="card-head" style="margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);">
+          <h3 style="font-size:15px;margin:0;display:flex;align-items:center;gap:6px;">
+            <span>📅 {{ d }}</span>
+            {% if d == today_short %}<span class="badge blue" style="font-size:10px;">TODAY</span>{% endif %}
+          </h3>
+          <span class="small muted">{{ day_classes|length }} class{{ '' if day_classes|length == 1 else 'es' }}</span>
+        </div>
+        {% if day_classes %}
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            {% for e in day_classes %}
+              <div class="class-card" data-day="{{ d }}" data-start="{{ e.start_time }}" data-end="{{ e.end_time }}" style="padding:10px 12px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);transition:border-color 0.2s, background 0.2s;">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin-bottom:4px;">
+                  <b style="font-size:13px;color:var(--text);">{{ e.subject.name if e.subject else 'Class' }}</b>
+                  <span class="badge gray" style="font-size:11px;">{{ e.start_time }}–{{ e.end_time }}</span>
+                </div>
+                <div class="small muted" style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px;">
+                  {% if e.room %}<span>📍 {{ e.room }}</span>{% endif %}
+                  {% if e.branches %}<span>🎓 {{ e.branches|join(', ') }}{% if e.section %}·{{ e.section }}{% endif %}</span>{% endif %}
+                  {% if (mode != 'teacher' or scope == 'all') and e.teacher and e.teacher.user %}<span>👤 {{ e.teacher.user.name }}</span>{% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="small muted" style="text-align:center;padding:16px 0;margin:0;">No classes</p>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+{# ================================================================
+   VIEW 2: OFFICIAL TIMETABLES — as CARD GRID
+   ================================================================ #}
+<div id="view-official" class="tt-view" style="display:none;">
+
+  {% if official_files %}
+    <div class="ot-grid">
+      {% for doc in official_files %}
+        {% set is_pdf = (doc.mime_type or '').endswith('pdf') or (doc.filename or '').lower().endswith('.pdf') %}
+        {% set is_img = (doc.mime_type or '').startswith('image/') %}
+
+        <div class="ot-card" data-file-id="{{ doc.id }}">
+
+          {# 3-dot menu (teacher only) #}
+          {% if mode == 'teacher' %}
+            <div class="ot-menu-wrap" onclick="event.stopPropagation();">
+              <button type="button" class="ot-menu-btn" onclick="otToggleMenu(this, event)" aria-label="More">⋮</button>
+              <div class="ot-menu">
+                <button type="button" class="ot-menu-item" onclick="otPreview({{ doc.id }}, '{{ doc.filename|e }}', '{{ doc.mime_type or '' }}')">
+                  👁 Preview
+                </button>
+                <a class="ot-menu-item" href="{{ url_for('files.download_file', fid=doc.id) }}">⬇ Download</a>
+                <button type="button" class="ot-menu-item" onclick="otShare({{ doc.id }}, '{{ doc.filename|e }}', '{{ doc.mime_type or '' }}')">
+                  🔗 Share
+                </button>
+                <button type="button" class="ot-menu-item" onclick="openModal('officialModal');closeOtMenus()">
+                  🔄 Replace
+                </button>
+                <div style="height:1px;background:var(--border);margin:4px 2px;"></div>
+                <form method="post" action="{{ url_for('teacher.timetable_official_delete', fid=doc.id) }}"
+                      onsubmit="return confirm('Remove this timetable?')" style="display:inline;">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="ot-menu-item danger">🗑️ Delete</button>
+                </form>
+              </div>
+            </div>
+          {% endif %}
+
+          {# Thumbnail / Preview zone #}
+          <div class="ot-thumb">
+            {% if is_img %}
+              <img src="{{ url_for('api.file_preview', fid=doc.id) }}"
+                   alt="{{ doc.filename }}" loading="lazy">
+            {% else %}
+              <div class="ot-thumb-icon {% if is_pdf %}pdf{% else %}img{% endif %}">
+                {% if is_pdf %}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <text x="6.5" y="17.5" font-size="7" font-weight="700" fill="currentColor" stroke="none" font-family="Inter, sans-serif">PDF</text>
+                  </svg>
+                {% else %}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                  </svg>
+                {% endif %}
+              </div>
+            {% endif %}
+
+            {% if is_pdf or is_img %}
+              <button type="button" class="ot-thumb-btn"
+                      onclick="otPreview({{ doc.id }}, '{{ doc.filename|e }}', '{{ doc.mime_type or '' }}')"
+                      aria-label="Preview"></button>
+            {% endif %}
+          </div>
+
+          {# Meta #}
+          <div class="ot-body">
+            <div class="ot-name" title="{{ doc.filename }}">{{ doc.filename }}</div>
+            <div class="ot-meta">
+              <span>{{ (doc.size_bytes / 1024)|round(1) }} KB</span>
+              <span class="sep">·</span>
+              <span>{{ doc.updated_at.strftime('%d %b %Y') }}</span>
+              {% if doc.uploader %}
+                <span class="sep">·</span>
+                <span>by {{ doc.uploader.name }}</span>
+              {% endif %}
+            </div>
+          </div>
+
+          {# Actions #}
+          <div class="ot-actions">
+            <button type="button" class="ot-btn primary"
+                    onclick="otPreview({{ doc.id }}, '{{ doc.filename|e }}', '{{ doc.mime_type or '' }}')">
+              👁 <span class="label">Preview</span>
+            </button>
+            <a class="ot-btn" href="{{ url_for('files.download_file', fid=doc.id) }}">
+              ⬇ <span class="label">Download</span>
+            </a>
+            <button type="button" class="ot-btn share"
+                    onclick="otShare({{ doc.id }}, '{{ doc.filename|e }}', '{{ doc.mime_type or '' }}')">
+              🔗 <span class="label">Share</span>
+            </button>
+          </div>
+
+        </div>
+      {% endfor %}
+    </div>
+
+  {% else %}
+    <div class="ot-empty">
+      <div class="icon">📄</div>
+      <h3>No official timetable uploaded</h3>
+      {% if mode == 'teacher' %}
+        <p>Upload the college's official timetable PDF or image. Students will see it here with preview and download.</p>
+        <button class="btn" onclick="openModal('officialModal')">📄 Upload Official Timetable</button>
+      {% else %}
+        <p>Ask your teacher or class representative to upload the official timetable.</p>
+      {% endif %}
+    </div>
+  {% endif %}
+
+</div>
+
+{# ================================================================
+   MODALS (teacher only)
+   ================================================================ #}
+{% if mode == 'teacher' %}
+
+<div class="modal-back" id="ttModal">
+  <form class="modal" method="post" action="{{ url_for('teacher.timetable_add') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="modal-head">
+      <h2>Add Timetable Entry</h2>
+      <button type="button" class="btn ghost sm" onclick="closeModal('ttModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row cols-2">
+        <div>
+          <label>Day</label>
+          <select name="day">
+            <option>Mon</option><option>Tue</option><option>Wed</option>
+            <option>Thu</option><option>Fri</option><option>Sat</option>
+          </select>
+        </div>
+        <div><label>Room</label><input type="text" name="room" placeholder="e.g. Room 201"></div>
+      </div>
+      <div class="form-row cols-2">
+        <div><label>Start Time</label><input type="text" name="start_time" placeholder="09:00" required></div>
+        <div><label>End Time</label><input type="text" name="end_time" placeholder="10:00" required></div>
+      </div>
+      <div class="form-row" style="margin-bottom:0;">
+        <label style="margin-bottom:8px;">Target Audience</label>
+        {% include "_targeting_fields.html" %}
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn outline" onclick="closeModal('ttModal')">Cancel</button>
+      <button class="btn">Add Entry</button>
+    </div>
+  </form>
+</div>
+
+<div class="modal-back" id="bulkModal">
+  <form class="modal" method="post" action="{{ url_for('teacher.timetable_bulk') }}" id="bulkForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="modal-head">
+      <h2>⚡ Bulk Import Timetable</h2>
+      <button type="button" class="btn ghost sm" onclick="closeModal('bulkModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="bulk-tabs">
+        <button type="button" class="bulk-tab active" data-bt="paste" onclick="switchBulk('paste')">📋 Paste text</button>
+        <button type="button" class="bulk-tab" data-bt="csv" onclick="switchBulk('csv')">📄 CSV</button>
+      </div>
+      <div id="bulk-paste">
+        <div class="form-row">
+          <label>Paste your timetable text — one class per line</label>
+          <textarea name="bulk_text" rows="9"
+            placeholder="Mon 09:00-10:00 Programming Fundamentals Room 201
+Mon 10:15-11:15 Engineering Mathematics Room 201
+Tue 09:00-10:00 Programming Lab 3
+..."></textarea>
+          <p class="small muted" style="margin-top:6px;line-height:1.7;">
+            <b>Formats:</b> <code>Mon 09:00-10:00 Subject Room 201</code> ·
+            <code>Monday | 09:00-10:00 | Subject</code>
+          </p>
+        </div>
+        <div class="form-row cols-2">
+          <div>
+            <label>Default day</label>
+            <select name="default_day">
+              <option value="Mon">Mon</option><option value="Tue">Tue</option>
+              <option value="Wed">Wed</option><option value="Thu">Thu</option>
+              <option value="Fri">Fri</option><option value="Sat">Sat</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div id="bulk-csv" style="display:none;">
+        <div class="form-row">
+          <label>CSV file</label>
+          <input type="file" name="csv" accept=".csv">
+        </div>
+      </div>
+      <div class="form-row" style="margin-bottom:0;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+        <label style="margin-bottom:8px;">Target Audience</label>
+        {% include "_targeting_fields.html" %}
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn outline" onclick="closeModal('bulkModal')">Cancel</button>
+      <button class="btn" type="submit">Import</button>
+    </div>
+  </form>
+</div>
+
+<div class="modal-back" id="officialModal">
+  <form class="modal" method="post" action="{{ url_for('teacher.timetable_official') }}"
+        enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="modal-head">
+      <h2>📄 Upload Official Timetable</h2>
+      <button type="button" class="btn ghost sm" onclick="closeModal('officialModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="small muted" style="margin-bottom:14px;line-height:1.7;">
+        Upload the college's official timetable as a <b>PDF or image</b>. Students will see it as a card with preview and download.
+      </p>
+      <div class="form-row">
+        <label>Choose file</label>
+        <label class="drop-zone">
+          <input type="file" name="file" required accept=".pdf,.png,.jpg,.jpeg,.webp">
+          <div class="dz-empty">
+            <div class="dz-icon">📄</div>
+            <div class="dz-text">Drop PDF or image here</div>
+            <div class="dz-hint">or <span class="dz-browse">browse files</span><br>
+              PDF · PNG · JPG · WEBP — up to 25 MB</div>
+          </div>
+          <div class="dz-progress"></div>
+        </label>
+      </div>
+      <div class="form-row" style="margin-bottom:0;">
+        <label style="margin-bottom:8px;">Target Audience</label>
+        {% include "_targeting_fields.html" %}
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn outline" onclick="closeModal('officialModal')">Cancel</button>
+      <button class="btn">Upload</button>
+    </div>
+  </form>
+</div>
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/timetable.js') }}?v=6"></script>
+<script>
+  window.CAMPUS_TODAY = "{{ today_short }}";
+
+  /* ---------- Tab switching ---------- */
+  /* switchView is defined in timetable.js */
+
+  /* ---------- Bulk import tabs ---------- */
+  function switchBulk(which) {
+    document.querySelectorAll('.bulk-tab').forEach(function (t) {
+      t.classList.toggle('active', t.dataset.bt === which);
+    });
+    var paste = document.getElementById('bulk-paste');
+    var csv = document.getElementById('bulk-csv');
+    if (!paste || !csv) return;
+    paste.style.display = (which === 'paste') ? 'block' : 'none';
+    csv.style.display = (which === 'csv') ? 'block' : 'none';
+    var csvInput = csv.querySelector('input[type=file]');
+    var pasteArea = paste.querySelector('textarea');
+    if (csvInput) csvInput.disabled = (which !== 'csv');
+    if (pasteArea) pasteArea.disabled = (which !== 'paste');
+  }
+  document.addEventListener('DOMContentLoaded', function () { switchBulk('paste'); });
+
+  /* ---------- Card menu ---------- */
+  function otToggleMenu(btn, e) {
+    if (e) { e.stopPropagation(); e.preventDefault(); }
+    var wrap = btn.closest('.ot-menu-wrap');
+    if (!wrap) return;
+    var wasOpen = wrap.classList.contains('open');
+    closeOtMenus();
+    if (!wasOpen) wrap.classList.add('open');
+  }
+  function closeOtMenus() {
+    document.querySelectorAll('.ot-menu-wrap.open').forEach(function (m) {
+      m.classList.remove('open');
+    });
+  }
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest || !e.target.closest('.ot-menu-wrap')) closeOtMenus();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeOtMenus();
+  });
+
+  /* ---------- Preview (uses global modal from base.html) ---------- */
+  function otPreview(fid, filename, mime) {
+    closeOtMenus();
+    if (typeof window.previewFile === 'function') {
+      window.previewFile(fid, filename, mime);
+    } else {
+      window.open('/api/files/' + fid + '/preview', '_blank');
+    }
+  }
+
+  /* ---------- Share (opens native share or copies link) ---------- */
+  function otShare(fid, filename, mime) {
+    closeOtMenus();
+    var url = window.location.origin + '/api/files/' + fid + '/preview';
+    var title = filename || 'Official Timetable';
+
+    if (navigator.share) {
+      navigator.share({ title: title, text: title, url: url })
+        .catch(function () { /* user cancelled */ });
+      return;
+    }
+
+    // Fallback: copy to clipboard
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(function () {
+        if (window.showToast) window.showToast('Link copied to clipboard', 'success');
+        else alert('Link copied: ' + url);
+      }).catch(function () {
+        window.prompt('Copy this link:', url);
+      });
+    } else {
+      window.prompt('Copy this link:', url);
+    }
+  }
+</script>
+{% endblock %}
