@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Teacher Dashboard — CampusDesk{% endblock %}
+
+{% block content %}
+<div class="hero">
+  <div>
+    <h1>Welcome, {{ current_user.name }}</h1>
+    <div class="sub">
+      {% if teacher %}{{ teacher.teacher_id }} • {{ teacher.department }}{% else %}Administrator{% endif %}
+    </div>
+    <div class="tag-row" style="margin-top:12px;">
+      <span class="tag">Use the <b>Create</b> button (top right) to publish anything</span>
+    </div>
+  </div>
+</div>
+
+<div class="grid cols-4" style="margin-bottom:20px;">
+  <div class="stat">
+    <div class="label">Assigned Students</div>
+    <div class="value">{{ total_students }}</div>
+  </div>
+  <div class="stat">
+    <div class="label">Active Notices</div>
+    <div class="value">{{ notices|length }}</div>
+  </div>
+  <div class="stat">
+    <div class="label">Submissions</div>
+    <div class="value">{{ total_submissions }}</div>
+  </div>
+  <div class="stat">
+    <div class="label">Pending Requests</div>
+    <div class="value">{{ pending_requests }}</div>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card">
+    <div class="card-head">
+      <h2>⚡ Quick Actions</h2>
+    </div>
+    <div class="grid cols-2" style="gap:10px;">
+      <a href="{{ url_for('teacher.notices') }}?new=1" class="btn outline" style="justify-content:flex-start;padding:14px;">📢 New Announcement</a>
+      <a href="{{ url_for('teacher.assignments') }}?new=1" class="btn outline" style="justify-content:flex-start;padding:14px;">📝 New Assignment</a>
+      <a href="{{ url_for('files.browse') }}?new=upload" class="btn outline" style="justify-content:flex-start;padding:14px;">📚 Upload Material</a>
+      <a href="{{ url_for('teacher.timetable') }}?new=bulk" class="btn outline" style="justify-content:flex-start;padding:14px;">📅 Update Timetable</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>🕐 Recent Uploads</h2>
+      <a href="{{ url_for('files.browse') }}" class="btn ghost sm">All →</a>
+    </div>
+    {% if recent_files %}
+      {% for f in recent_files %}
+        <div class="item" style="padding:11px 14px;">
+          <div class="item-head">
+            <div class="item-title" style="font-size:13.5px;">{{ f.icon }} {{ f.filename }}</div>
+            <span class="badge gray">v{{ f.version }}</span>
+          </div>
+          <div class="item-meta"><span>{{ f.updated_at.strftime('%d %b, %H:%M') }}</span></div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty rich">
+        <div class="empty-illust">📤</div>
+        <h3>No uploads yet</h3>
+        <p>Upload study material to get started.</p>
+        <a href="{{ url_for('files.browse') }}?new=upload" class="btn">Upload Material</a>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid cols-2" style="margin-top:16px;">
+  <div class="card">
+    <div class="card-head"><h2>📢 Recent Announcements</h2></div>
+    {% if notices %}
+      {% for n in notices %}
+        <div class="item" style="padding:11px 14px;">
+          <div class="item-head">
+            <div class="item-title" style="font-size:13.5px;">{{ n.title }}</div>
+            <span class="badge priority-{{ n.priority }}">{{ n.priority|title }}</span>
+          </div>
+          <div class="item-meta"><span>{{ n.publish_date.strftime('%d %b %Y') }}</span></div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty"><h3>No announcements</h3></div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>📝 Recent Assignments</h2></div>
+    {% if assignments %}
+      {% for a in assignments %}
+        <div class="item" style="padding:11px 14px;">
+          <div class="item-head">
+            <div class="item-title" style="font-size:13.5px;">{{ a.title }}</div>
+            <span class="badge {% if a.status == 'closed' %}gray{% else %}success{% endif %}">{{ a.status }}</span>
+          </div>
+          <div class="item-meta">
+            {% if a.due_date %}<span>Due {{ a.due_date.strftime('%d %b') }}</span>{% endif %}
+            <span class="badge gray">{{ a.submission_count() }} submitted</span>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty"><h3>No assignments</h3></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
