@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Edit Announcement — CampusDesk{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/notices.css') }}?v=3">
+
+<div class="page-head">
+  <div>
+    <h1>✏️ Edit Announcement</h1>
+    <div class="sub">Update the title, caption, priority or image</div>
+  </div>
+  <div class="actions">
+    <a href="{{ url_for('teacher.notices') }}" class="btn outline">← Back</a>
+  </div>
+</div>
+
+<div class="edit-wrap">
+  <form class="card" method="post" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="form-row">
+      <label>Title</label>
+      <input type="text" name="title" value="{{ notice.title or '' }}"
+             placeholder="Short headline" maxlength="200">
+    </div>
+
+    <div class="form-row">
+      <label>Caption / Details</label>
+      <textarea name="description" rows="5"
+                placeholder="Write the message…">{{ notice.description or '' }}</textarea>
+    </div>
+
+    <div class="form-row cols-2">
+      <div>
+        <label>Priority</label>
+        <select name="priority">
+          <option value="normal"    {% if notice.priority == 'normal' %}selected{% endif %}>Normal</option>
+          <option value="important" {% if notice.priority == 'important' %}selected{% endif %}>Important</option>
+          <option value="urgent"    {% if notice.priority == 'urgent' %}selected{% endif %}>Urgent</option>
+        </select>
+      </div>
+      <div>
+        <label>Publish Date</label>
+        <input type="datetime-local" name="publish_date"
+               value="{{ notice.publish_date.strftime('%Y-%m-%dT%H:%M') if notice.publish_date else '' }}">
+      </div>
+    </div>
+
+    {% if notice.attachment %}
+      <div class="form-row">
+        <label>Current Image</label>
+        <div style="padding:10px;background:var(--surface-2);border-radius:10px;display:flex;gap:12px;align-items:center;">
+          <img src="{{ url_for('api.file_preview', fid=notice.attachment.id) }}"
+               alt="Current image"
+               style="width:70px;height:70px;object-fit:cover;border-radius:8px;flex-shrink:0;">
+          <span class="small muted" style="flex:1;min-width:0;">{{ notice.attachment.filename }}</span>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="form-row">
+      <label>{% if notice.attachment %}Replace image{% else %}Image{% endif %} (optional)</label>
+      <label class="drop-zone">
+        <input type="file" name="image" accept=".png,.jpg,.jpeg,.webp,.gif">
+        <div class="dz-empty">
+          <div class="dz-icon">🖼️</div>
+          <div class="dz-text">Drop a new image here</div>
+          <div class="dz-hint">Leave blank to keep existing image</div>
+        </div>
+      </label>
+    </div>
+
+    <div class="form-row" style="margin-bottom:0;">
+      <label style="margin-bottom:8px;">Target Audience</label>
+      {% include "_targeting_fields.html" with context %}
+    </div>
+
+    <div class="form-actions">
+      <a href="{{ url_for('teacher.notices') }}" class="btn outline">Cancel</a>
+      <button type="submit" class="btn">Save Changes</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
