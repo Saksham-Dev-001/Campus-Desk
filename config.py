@@ -23,6 +23,11 @@ class Config:
     # (sqlite:// and already-explicit postgresql+psycopg2:// pass through unchanged)
     SQLALCHEMY_DATABASE_URI = _db_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,
+        "pool_recycle": 280,
+    }
+    SEND_FILE_MAX_AGE_DEFAULT = 86400  # 1 day browser caching for static files
 
     APP_NAME = "CampusDesk"
     APP_VERSION = "2.6"
