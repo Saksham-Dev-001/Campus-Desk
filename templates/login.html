@@ -9,13 +9,14 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="format-detection" content="telephone=no">
 <title>Sign in — CampusDesk</title>
+<link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
 <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/favicon.png') }}">
 <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='img/logo-192.png') }}">
 <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
 <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=11">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}?v=11">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=12">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}?v=12">
 <script src="{{ url_for('static', filename='js/theme.js') }}?v=4"></script>
 </head>
 <body class="login-body">
@@ -29,19 +30,14 @@
 
   <aside class="login-brand">
     <div class="lb-brand">
-      <div class="lb-logo">
-        <img src="{{ url_for('static', filename='img/logo-sm.png') }}" alt="CampusDesk Logo" class="brand-img">
-      </div>
+      <div class="lb-logo">CD</div>
       <div class="lb-brand-text">
         <b>CampusDesk</b>
-        <span>A Smart Data Organizer</span>
+        <span>Team Anonymous</span>
       </div>
     </div>
 
     <div class="lb-hero">
-      <div class="lb-hero-badge">
-        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="CampusDesk Official Logo" class="lb-hero-logo">
-      </div>
       <h1>Right info.<br>Right student.<br><span class="accent">Right time.</span></h1>
       <p>
         A unified academic platform for your college. Notices, assignments,
@@ -90,13 +86,8 @@
     <div class="login-panel-inner">
 
       <div class="mobile-brand">
-        <div class="lb-logo">
-          <img src="{{ url_for('static', filename='img/logo-sm.png') }}" alt="CampusDesk Logo" class="brand-img">
-        </div>
-        <div class="mobile-brand-meta">
-          <b>CampusDesk</b>
-          <span class="mobile-brand-sub">A Smart Data Organizer</span>
-        </div>
+        <div class="lb-logo">CD</div>
+        <b>CampusDesk</b>
       </div>
 
       <div class="lp-header">
