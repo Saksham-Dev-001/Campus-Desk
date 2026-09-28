@@ -3,6 +3,7 @@ import csv
 import io
 import json
 from datetime import datetime, timedelta
+from services.time_utils import now_ist
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, abort, current_app, send_file)
 from flask_login import login_required, current_user
@@ -731,7 +732,7 @@ def audit():
     logs = query.order_by(AuditLog.created_at.desc()).limit(200).all()
 
     grouped = {}
-    today = datetime.utcnow().date()
+    today = now_ist().date()
     yesterday = today - timedelta(days=1)
 
     for l in logs:
