@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Profile — CampusDesk{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>👤 My Profile</h1>
+    <div class="sub">Your academic identity</div>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card">
+    <div class="card-head"><h2>Identity</h2></div>
+    <div class="table-wrap">
+      <table class="table">
+        <tr><td class="muted">Name</td><td><b>{{ student.user.name }}</b></td></tr>
+        <tr><td class="muted">Enrollment Number</td><td><span class="badge">{{ student.enrollment_number }}</span></td></tr>
+        <tr><td class="muted">Role</td><td>{{ student.user.role.replace('_',' ')|title }}</td></tr>
+        <tr><td class="muted">Status</td><td>
+          {% if student.user.active %}<span class="badge success">Active</span>
+          {% else %}<span class="badge danger">Inactive</span>{% endif %}
+        </td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Academic Placement</h2></div>
+    <div class="table-wrap">
+      <table class="table">
+        <tr><td class="muted">Course</td><td>{{ student.course.name if student.course else '—' }}</td></tr>
+        <tr><td class="muted">Branch</td><td>{{ student.branch.name if student.branch else '—' }} ({{ student.branch.code if student.branch else '—' }})</td></tr>
+        <tr><td class="muted">Year</td><td>{{ student.year.name if student.year else '—' }}</td></tr>
+        <tr><td class="muted">Semester</td><td>{{ student.semester.name if student.semester else '—' }}</td></tr>
+        <tr><td class="muted">Section</td><td>{{ student.section.name if student.section else '—' }}</td></tr>
+        <tr><td class="muted">Batch</td><td>{{ student.batch.name if student.batch else '—' }}</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px;">
+  <div class="card-head"><h2>Full Academic Label</h2></div>
+  <div class="badge" style="font-size:13px;padding:8px 14px;">{{ student.academic_label }}</div>
+  <p class="small muted" style="margin-top:12px;">
+    This is the exact identity the targeting engine uses to route content to you.
+  </p>
+</div>
+{% endblock %}
