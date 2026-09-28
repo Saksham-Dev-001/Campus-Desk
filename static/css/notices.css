@@ -1,0 +1,371 @@
+/* =====================================================================
+   CampusDesk - Announcements (card grid, image + caption)
+   Inspired by modern feed UIs (PW-style)
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   Grid
+   --------------------------------------------------------------------- */
+.ann-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 18px;
+  margin-top: 8px;
+}
+@media (max-width: 1200px) {
+  .ann-grid { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+}
+@media (max-width: 900px) {
+  .ann-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+}
+@media (max-width: 600px) {
+  .ann-grid { grid-template-columns: 1fr; gap: 12px; }
+}
+
+/* ---------------------------------------------------------------------
+   Announcement card
+   --------------------------------------------------------------------- */
+.ann-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: transform .18s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.ann-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md), 0 12px 30px rgba(15,23,42,.08);
+  border-color: var(--border-strong);
+}
+
+/* Priority: subtle top strip */
+.ann-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--accent);
+}
+.ann-card.priority-urgent::before    { background: var(--danger); }
+.ann-card.priority-important::before { background: var(--warn); }
+
+/* ---------------------------------------------------------------------
+   Header (author + time + menu)
+   --------------------------------------------------------------------- */
+.ann-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 12px;
+}
+.ann-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #2b5cff, #7c3aed);
+  box-shadow: 0 2px 6px rgba(43,92,255,.18);
+}
+.ann-meta {
+  flex: 1;
+  min-width: 0;
+}
+.ann-meta b {
+  display: block;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ann-meta span {
+  display: block;
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+
+/* Priority badge in header */
+.ann-priority {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  flex-shrink: 0;
+}
+.ann-priority.urgent    { background: rgba(225,29,72,.14); color: var(--danger); }
+.ann-priority.important { background: rgba(217,119,6,.14); color: var(--warn); }
+.ann-priority.normal    { background: var(--accent-soft);   color: var(--accent); }
+.ann-priority svg { width: 10px; height: 10px; stroke-width: 2.5; }
+
+/* Menu button */
+.ann-menu-wrap { position: relative; flex-shrink: 0; }
+.ann-menu-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all .14s;
+  padding: 0;
+  opacity: 0;
+}
+.ann-card:hover .ann-menu-btn,
+.ann-menu-wrap.open .ann-menu-btn { opacity: 1; }
+@media (hover: none) { .ann-menu-btn { opacity: 1; } }
+.ann-menu-btn:hover {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--text);
+}
+.ann-menu-btn svg { width: 16px; height: 16px; }
+
+.ann-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 170px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  box-shadow: var(--shadow-lg);
+  padding: 5px;
+  opacity: 0;
+  transform: translateY(-4px) scale(.96);
+  transform-origin: top right;
+  pointer-events: none;
+  transition: opacity .16s, transform .16s;
+  z-index: 60;
+}
+.ann-menu-wrap.open .ann-menu {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+.ann-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  transition: background .12s;
+}
+.ann-menu-item:hover { background: var(--surface-2); }
+.ann-menu-item svg { width: 14px; height: 14px; opacity: .7; flex-shrink: 0; }
+.ann-menu-item.danger { color: var(--danger); }
+.ann-menu-item.danger:hover { background: var(--danger-soft); }
+.ann-menu-item.danger svg { opacity: 1; }
+
+/* ---------------------------------------------------------------------
+   Body
+   --------------------------------------------------------------------- */
+.ann-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Image block */
+.ann-image {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: var(--surface-2);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.ann-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform .4s ease;
+}
+.ann-card:hover .ann-image img { transform: scale(1.03); }
+.ann-image-btn {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  border: none;
+  cursor: zoom-in;
+  padding: 0;
+}
+
+/* Caption */
+.ann-caption {
+  padding: 14px 16px 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.ann-title {
+  font-size: 14.5px;
+  font-weight: 650;
+  color: var(--text);
+  letter-spacing: -.15px;
+  line-height: 1.35;
+  margin-bottom: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ann-text {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* If there's no image, give the caption more breathing room */
+.ann-card.no-image .ann-text { -webkit-line-clamp: 6; }
+
+/* Target chip (teacher only) */
+.ann-chips {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.ann-chips .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 7px;
+  background: var(--surface-2);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  border: 1px solid var(--border);
+  line-height: 1.4;
+}
+.ann-chips .chip svg { width: 10px; height: 10px; }
+
+/* ---------------------------------------------------------------------
+   Footer
+   --------------------------------------------------------------------- */
+.ann-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-3);
+  background: var(--surface-2);
+}
+.ann-foot .fi {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.ann-foot .fi svg {
+  width: 12px;
+  height: 12px;
+  opacity: .7;
+  stroke-width: 2;
+}
+
+/* ---------------------------------------------------------------------
+   Empty state
+   --------------------------------------------------------------------- */
+.ann-empty {
+  text-align: center;
+  padding: 60px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+.ann-empty .empty-illust {
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 18px;
+  border-radius: 22px;
+  background: var(--surface-3);
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  font-size: 38px;
+}
+.ann-empty h3 { font-size: 17px; margin-bottom: 6px; }
+.ann-empty p { color: var(--text-2); max-width: 380px; margin: 0 auto 20px; line-height: 1.6; }
+
+/* ---------------------------------------------------------------------
+   Modal upload dropzone (reuse)
+   --------------------------------------------------------------------- */
+.ann-image-drop {
+  aspect-ratio: 16 / 10;
+}
+
+/* ---------------------------------------------------------------------
+   Image lightbox
+   --------------------------------------------------------------------- */
+.ann-lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 10, 20, .92);
+  backdrop-filter: blur(6px);
+  z-index: 300;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn .18s ease;
+}
+.ann-lightbox.show { display: flex; }
+.ann-lightbox img {
+  max-width: 100%;
+  max-height: 90vh;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.6);
+}
+.ann-lightbox-close {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.15);
+  background: rgba(255,255,255,.1);
+  color: #fff;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  backdrop-filter: blur(8px);
+}
+.ann-lightbox-close:hover { background: rgba(255,255,255,.2); }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
