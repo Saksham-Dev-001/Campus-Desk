@@ -205,8 +205,33 @@
 }
 
 @media (max-width: 900px) {
+  .as-card { padding: 14px 12px; }
+  .as-card .card-head { gap: 8px; margin-bottom: 10px; }
   .as-search { flex: 1 1 100%; order: 3; }
-  .as-item { font-size: 13px; padding: 9px 11px; }
+  .as-search input { font-size: 16px !important; }
+  .as-item { font-size: 13px; padding: 8px 10px; gap: 8px; min-width: 0; }
+  .as-item .as-name { font-size: 13px; min-width: 0; flex: 1; }
+  .as-item-actions { flex-shrink: 0; gap: 2px; }
+  .as-btn-icon { width: 28px; height: 28px; }
+  .as-form input[type=text],
+  .as-form input[type=number],
+  .as-form select {
+    font-size: 16px !important;
+    padding: 8px 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .as-form .btn { width: 100%; justify-content: center; }
+  .as-form-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .as-form-row input[type=text],
+  .as-form-row select {
+    width: 100%;
+    flex: 1 1 auto;
+  }
   .as-form-row .btn { flex: 1 1 100%; justify-content: center; }
 }
 
