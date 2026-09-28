@@ -406,6 +406,8 @@
               {% if e.room %}<span class="badge gray">📍 {{ e.room }}</span>{% endif %}
               {% if e.branches %}
                 <span class="badge gray">🎓 {{ e.branches|join(', ') }}{% if e.section %} · Sec {{ e.section }}{% endif %}{% if e.batch %} · Batch {{ e.batch }}{% endif %}</span>
+              {% elif e.branch %}
+                <span class="badge gray">🎓 {{ e.branch.code }}{% if e.section %} · Sec {{ e.section.name }}{% endif %}{% if e.batch %} · Batch {{ e.batch.name }}{% endif %}</span>
               {% endif %}
               {% if (mode != 'teacher' or scope == 'all') and e.teacher and e.teacher.user %}
                 <span class="badge gray">👤 {{ e.teacher.user.name }}</span>
@@ -460,7 +462,8 @@
                 </div>
                 <div class="small muted" style="display:flex;flex-wrap:wrap;gap:6px;font-size:11px;">
                   {% if e.room %}<span>📍 {{ e.room }}</span>{% endif %}
-                  {% if e.branches %}<span>🎓 {{ e.branches|join(', ') }}{% if e.section %}·{{ e.section }}{% endif %}</span>{% endif %}
+                  {% if e.branches %}<span>🎓 {{ e.branches|join(', ') }}{% if e.section %}·{{ e.section }}{% endif %}{% if e.batch %}·{{ e.batch }}{% endif %}</span>
+                  {% elif e.branch %}<span>🎓 {{ e.branch.code }}{% if e.section %}·{{ e.section.name }}{% endif %}{% if e.batch %}·{{ e.batch.name }}{% endif %}</span>{% endif %}
                   {% if (mode != 'teacher' or scope == 'all') and e.teacher and e.teacher.user %}<span>👤 {{ e.teacher.user.name }}</span>{% endif %}
                 </div>
               </div>
