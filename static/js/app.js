@@ -219,3 +219,30 @@ document.addEventListener('DOMContentLoaded', function () {
     }, 5000);
   });
 });
+
+/* ---------------- Mobile PWA / Anti-Zoom Guard ---------------- */
+(function () {
+  // Prevent multi-touch pinch zoom on mobile devices and installed PWA
+  document.addEventListener('gesturestart', function (e) {
+    e.preventDefault();
+  }, { passive: false });
+  document.addEventListener('gesturechange', function (e) {
+    e.preventDefault();
+  }, { passive: false });
+  document.addEventListener('gestureend', function (e) {
+    e.preventDefault();
+  }, { passive: false });
+
+  // Prevent double-tap zoom while keeping normal fast tap interactions
+  var lastTouchEnd = 0;
+  document.addEventListener('touchend', function (e) {
+    var now = Date.now();
+    if (now - lastTouchEnd <= 300) {
+      var tag = e.target && e.target.tagName;
+      if (tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') {
+        e.preventDefault();
+      }
+    }
+    lastTouchEnd = now;
+  }, { passive: false });
+})();
