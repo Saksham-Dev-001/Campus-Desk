@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — CampusDesk{% endblock %}
+
+{% block content %}
+<div class="hero">
+  <div>
+    <h1>{{ greeting }}, {{ student.user.name.split(' ')[0] }} 👋</h1>
+    <div class="sub">{{ student.academic_label }}</div>
+    <div class="tag-row">
+      <span class="tag">Enrollment · {{ student.enrollment_number }}</span>
+      {% if current_user.role == 'student_admin' %}<span class="tag">⭐ Student Admin</span>{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="grid cols-4" style="margin-bottom:20px;">
+  <div class="stat">
+    <div class="label">Announcements</div>
+    <div class="value">{{ notices|length }}</div>
+    <div class="hint">Relevant to you</div>
+  </div>
+  <div class="stat">
+    <div class="label">Open Assignments</div>
+    <div class="value">{{ open_assignments }}</div>
+    <div class="hint">Pending work</div>
+  </div>
+  <div class="stat">
+    <div class="label">Study Material</div>
+    <div class="value">{{ materials|length }}</div>
+    <div class="hint">Recent files</div>
+  </div>
+  <div class="stat">
+    <div class="label">Notifications</div>
+    <div class="value">{{ unread_notifs }}</div>
+    <div class="hint">Unread</div>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card">
+    <div class="card-head">
+      <h2>📢 Recent Announcements</h2>
+      <a href="{{ url_for('student.notices') }}" class="btn ghost sm">View all →</a>
+    </div>
+    {% if notices %}
+      {% for n in notices %}
+        <div class="item">
+          <div class="item-head">
+            <div class="item-title">{{ n.title }}</div>
+            <span class="badge priority-{{ n.priority }}">{{ n.priority|title }}</span>
+          </div>
+          {% if n.description %}
+            <div class="item-desc">{{ n.description[:140] }}{% if n.description|length > 140 %}…{% endif %}</div>
+          {% endif %}
+          <div class="item-meta">
+            <span>{{ n.publish_date.strftime('%d %b %Y') }}</span>
+            {% if n.author %}<span>by {{ n.author.name }}</span>{% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty rich">
+        <div class="empty-illust">📭</div>
+        <h3>No announcements yet</h3>
+        <p>You're all caught up.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>📝 Upcoming Assignments</h2>
+      <a href="{{ url_for('student.assignments') }}" class="btn ghost sm">View all →</a>
+    </div>
+    {% if assignments %}
+      {% for a in assignments %}
+        <div class="item">
+          <div class="item-title">{{ a.title }}</div>
+          <div class="item-meta">
+            {% if a.subject %}<span class="badge">{{ a.subject.name }}</span>{% endif %}
+            {% if a.due_date %}<span>📅 Due {{ a.due_date.strftime('%d %b %Y') }}</span>{% endif %}
+            {% if a.days_left is not none and a.days_left >= 0 %}
+              <span class="badge warn">{{ a.days_left }}d left</span>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty rich">
+        <div class="empty-illust">✅</div>
+        <h3>No assignments</h3>
+        <p>Nothing pending right now.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid cols-2" style="margin-top:16px;">
+  <div class="card">
+    <div class="card-head">
+      <h2>📅 Today's Timetable</h2>
+      <a href="{{ url_for('student.timetable') }}" class="btn ghost sm">Full week →</a>
+    </div>
+    {% if timetable %}
+      {% for e in timetable %}
+        <div class="item" style="padding:12px 14px;">
+          <div class="item-head">
+            <div class="item-title">{{ e.subject.name if e.subject else 'Class' }}</div>
+            <span class="badge">{{ e.start_time }}–{{ e.end_time }}</span>
+          </div>
+          <div class="item-meta">
+            {% if e.room %}<span>📍 {{ e.room }}</span>{% endif %}
+            {% if e.teacher %}<span>👤 {{ e.teacher.user.name }}</span>{% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty rich">
+        <div class="empty-illust">🎉</div>
+        <h3>No classes today</h3>
+        <p>Enjoy your day off.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>📚 Recent Material</h2>
+      <a href="{{ url_for('files.browse') }}" class="btn ghost sm">Browse →</a>
+    </div>
+    {% if materials %}
+      {% for f in materials %}
+        <div class="item" style="padding:11px 14px;">
+          <div class="item-head">
+            <div class="item-title" style="font-size:13.5px;">{{ f.icon }} {{ f.filename }}</div>
+            <div class="file-actions">
+              {% if f.is_previewable %}
+                <button class="btn ghost sm" onclick="previewFile({{ f.id }}, '{{ f.filename|e }}', '{{ f.mime_type or '' }}')" title="Preview">👁️</button>
+              {% endif %}
+              <a href="{{ url_for('files.download_file', fid=f.id) }}" class="btn outline sm">↓</a>
+            </div>
+          </div>
+          <div class="item-meta">
+            <span>v{{ f.version }}</span>
+            <span>{{ f.updated_at.strftime('%d %b %Y') }}</span>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty rich">
+        <div class="empty-illust">📚</div>
+        <h3>No material yet</h3>
+        <p>Study material will appear here.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
