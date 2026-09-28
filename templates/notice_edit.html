@@ -75,10 +75,16 @@
       {% include "_targeting_fields.html" with context %}
     </div>
 
-    <div class="form-actions">
+    <div class="form-actions" style="display:flex;justify-content:space-between;align-items:center;">
       <a href="{{ url_for('teacher.notices') }}" class="btn outline">Cancel</a>
-      <button type="submit" class="btn">Save Changes</button>
+      <div style="display:flex;gap:10px;">
+        <button type="button" class="btn danger" onclick="if(confirm('Delete this announcement permanently?')) { document.getElementById('deleteNoticeForm').submit(); }">Delete</button>
+        <button type="submit" class="btn">Save Changes</button>
+      </div>
     </div>
+  </form>
+  <form id="deleteNoticeForm" method="post" action="{{ url_for('teacher.delete_notice', nid=notice.id) }}" style="display:none;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
   </form>
 </div>
 {% endblock %}
