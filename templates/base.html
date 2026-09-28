@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+<meta name="theme-color" content="#0e1428">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CampusDesk">
+<title>{% block title %}CampusDesk{% endblock %}</title>
+<link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='icons/icon.svg') }}">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon.svg') }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=8">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/polish.css') }}?v=4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/create-menu.css') }}?v=2">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ux-v3.css') }}?v=7">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/loader.css') }}?v=2">
+<script src="{{ url_for('static', filename='js/theme.js') }}?v=4"></script>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-logo">CD</div>
+      <div class="brand-text">
+        <b>CampusDesk</b>
+        <span>Team Anonymous</span>
+      </div>
+      <button class="sidebar-close" onclick="closeSidebar()" aria-label="Close menu">&#10005;</button>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-section">Main</div>
+      <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint == 'dashboard' else '' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a href="{{ url_for('files.browse') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('files.') else '' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        Study Material
+      </a>
+
+      {% if current_user.is_authenticated and current_user.is_student %}
+        <a href="{{ url_for('student.notices') }}" class="{{ 'active' if request.endpoint == 'student.notices' else '' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
+          Announcements
+        </a>
+        <a href="{{ url_for('student.assignments') }}" class="{{ 'active' if request.endpoint == 'student.assignments' else '' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Assignments
+        </a>
+        <a href="{{ url_for('student.timetable') }}" class="{{ 'active' if request.endpoint == 'student.timetable' else '' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Timetable
+        </a>
+        <a href="{{ url_for('student.notifications') }}" class="{{ 'active' if request.endpoint == 'student.notifications' else '' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/></svg>
+          Notifications
+        </a>
+        <a href="{{ url_for('student.requests_') }}" class="{{ 'active' if request.endpoint == 'student.requests_' else '' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          My Requests
+        </a>
+        <a href="{{ url_for('student.profile') }}" class="{{ 'active' if request.endpoint == 'student.profile' else '' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Profile
+        </a>
+      {% endif %}
+
+      {% if current_user.is_authenticated and current_user.role == 'teacher' %}
+        <div class="nav-section">Teaching</div>
+        <a href="{{ url_for('teacher.notices') }}" class="{{ 'active' if request.endpoint == 'teacher.notices' else '' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
+          Announcements
+        </a>
+        <a href="{{ url_for('teacher.assignments') }}" class="{{ 'active' if request.endpoint == 'teacher.assignments' else '' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Assignments
+        </a>
+        <a href="{{ url_for('teacher.timetable') }}" class="{{ 'active' if request.endpoint == 'teacher.timetable' else '' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Timetable
+        </a>
+        <a href="{{ url_for('teacher.requests_') }}" class="{{ 'active' if request.endpoint == 'teacher.requests_' else '' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Student Requests
+        </a>
+        <a href="{{ url_for('teacher.profile') }}" class="{{ 'active' if request.endpoint == 'teacher.profile' else '' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Profile
+        </a>
+      {% endif %}
+
+      {% if current_user.is_authenticated and current_user.is_admin %}
+        <div class="nav-section">Administration</div>
+        <a href="{{ url_for('admin.users') }}" class="{{ 'active' if request.endpoint == 'admin.users' else '' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Users
+        </a>
+        <a href="{{ url_for('admin.structure') }}" class="{{ 'active' if request.endpoint == 'admin.structure' else '' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
+          Academic Structure
+        </a>
+        <a href="{{ url_for('admin.import_students') }}" class="{{ 'active' if request.endpoint == 'admin.import_students' else '' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Bulk Import
+        </a>
+        <a href="{{ url_for('admin.storage') }}" class="{{ 'active' if request.endpoint == 'admin.storage' else '' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+          Storage
+        </a>
+        <a href="{{ url_for('admin.audit') }}" class="{{ 'active' if request.endpoint == 'admin.audit' else '' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+          Audit Log
+        </a>
+      {% endif %}
+    </nav>
+
+    <div class="sidebar-foot">
+      <b>CampusDesk</b> v2.6<br>
+      <span>Right info · Right student · Right time</span>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <button class="icon-btn menu-btn" onclick="openSidebar()" aria-label="Open menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+
+      <form class="search" action="{{ url_for('search.search') }}" method="get">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" name="q" placeholder="Search…" value="{{ request.args.get('q','') }}">
+        <div class="kbd-hint"><span class="kbd">Ctrl</span><span class="kbd">K</span></div>
+      </form>
+
+      <div class="spacer"></div>
+
+      {% if current_user.is_authenticated and current_user.role in ('teacher', 'admin', 'student_admin') %}
+        <button type="button" class="create-btn" onclick="openCreateMenu(event)" aria-label="Create">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span>Create</span>
+        </button>
+      {% endif %}
+
+      <button class="icon-btn theme-btn" onclick="toggleTheme()" aria-label="Toggle theme" title="Dark / Light mode">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.07" y2="4.93"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+
+      {% if current_user.is_authenticated %}
+        <div class="bell-wrap">
+          <button class="icon-btn bell-btn" onclick="toggleBell(event)" aria-label="Notifications" title="Notifications">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span class="bell-badge hidden" id="bellBadge">0</span>
+          </button>
+          <div class="bell-panel" id="bellPanel">
+            <div class="bell-head">
+              <h3>Notifications</h3>
+              <a href="#" onclick="markAllRead(event); return false;">Mark all read</a>
+            </div>
+            <div class="bell-list" id="bellList"><div class="bell-empty">Loading…</div></div>
+            <div class="bell-foot">
+              <a href="{{ url_for('student.notifications') if current_user.is_student else url_for('dashboard') }}">
+                View all notifications
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div class="user-chip">
+          <div class="avatar" data-color="{{ current_user.avatar_color }}">{{ current_user.initials }}</div>
+          <div class="user-meta">
+            <b>{{ current_user.name }}</b>
+            <small>{{ current_user.role.replace('_',' ')|title }}</small>
+          </div>
+        </div>
+        <a href="{{ url_for('auth.logout') }}" class="btn outline sm signout-btn">Sign out</a>
+        <a href="{{ url_for('auth.logout') }}" class="icon-btn mobile-signout-btn" title="Sign out" aria-label="Sign out">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </a>
+      {% endif %}
+    </div>
+
+    <div class="content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+          <div class="flash {{ cat }}">{{ msg }}</div>
+        {% endfor %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </div>
+
+    {% if current_user.is_authenticated and current_user.is_student %}
+    <nav class="mobile-nav">
+      <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.endpoint == 'dashboard' else '' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span>Home</span>
+      </a>
+      <a href="{{ url_for('files.browse') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('files.') else '' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        <span>Files</span>
+      </a>
+      <a href="{{ url_for('student.notices') }}" class="{{ 'active' if request.endpoint == 'student.notices' else '' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
+        <span>Announce</span>
+      </a>
+      <a href="{{ url_for('student.assignments') }}" class="{{ 'active' if request.endpoint == 'student.assignments' else '' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span>Work</span>
+      </a>
+      <a href="{{ url_for('student.profile') }}" class="{{ 'active' if request.endpoint == 'student.profile' else '' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/></svg>
+        <span>Me</span>
+      </a>
+    </nav>
+    {% endif %}
+
+    {% if current_user.is_authenticated and current_user.role == 'teacher' %}
+    <nav class="mobile-nav">
+      <a href="{{ url_for('teacher.dashboard') }}" class="{{ 'active' if request.endpoint == 'teacher.dashboard' else '' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span>Home</span>
+      </a>
+      <a href="{{ url_for('teacher.timetable') }}" class="{{ 'active' if request.endpoint == 'teacher.timetable' else '' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span>Schedule</span>
+      </a>
+      <a href="{{ url_for('files.browse') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('files.') else '' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        <span>Files</span>
+      </a>
+      <a href="{{ url_for('teacher.notices') }}" class="{{ 'active' if request.endpoint == 'teacher.notices' else '' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
+        <span>Announce</span>
+      </a>
+      <a href="{{ url_for('teacher.profile') }}" class="{{ 'active' if request.endpoint == 'teacher.profile' else '' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/></svg>
+        <span>Me</span>
+      </a>
+    </nav>
+    {% endif %}
+
+    {% if current_user.is_authenticated and current_user.is_admin %}
+    <nav class="mobile-nav">
+      <a href="{{ url_for('admin.dashboard') }}" class="{{ 'active' if request.endpoint == 'admin.dashboard' else '' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <span>Home</span>
+      </a>
+      <a href="{{ url_for('admin.users') }}" class="{{ 'active' if request.endpoint == 'admin.users' else '' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Users</span>
+      </a>
+      <a href="{{ url_for('admin.structure') }}" class="{{ 'active' if request.endpoint == 'admin.structure' else '' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"/></svg>
+        <span>Structure</span>
+      </a>
+      <a href="{{ url_for('files.browse') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('files.') else '' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        <span>Files</span>
+      </a>
+      <a href="{{ url_for('admin.audit') }}" class="{{ 'active' if request.endpoint == 'admin.audit' else '' }}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+        <span>Audit</span>
+      </a>
+    </nav>
+    {% endif %}
+
+    {% if current_user.is_authenticated and current_user.role in ('teacher', 'admin', 'student_admin') %}
+    <button type="button" class="mobile-fab" style="display:none;" onclick="openCreateMenu(event)" aria-label="Create item" title="Create">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"/>
+        <line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+    </button>
+    {% endif %}
+  </div>
+</div>
+
+{# ============================================================
+   YouTube-style Create menu overlay
+   ============================================================ #}
+{% if current_user.is_authenticated and current_user.role in ('teacher', 'admin', 'student_admin') %}
+<div class="create-back" id="createBack">
+  <div class="create-modal" onclick="event.stopPropagation()">
+    <div class="create-head">
+      <div>
+        <h2>✨ What would you like to create?</h2>
+        <span class="sub">Pick an option — we'll take you right there</span>
+      </div>
+      <button type="button" class="btn ghost sm" onclick="closeCreateMenu()" aria-label="Close">✕</button>
+    </div>
+
+    <div class="create-grid">
+      <div class="create-section-label">Communicate</div>
+
+      <a class="create-opt" href="{{ url_for('teacher.notices') }}?new=1" onclick="closeCreateMenu()">
+        <div class="co-icon blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
+        </div>
+        <div class="co-body"><b>Announcement</b><span>Share updates with students</span></div>
+      </a>
+
+      <a class="create-opt" href="{{ url_for('teacher.assignments') }}?new=1" onclick="closeCreateMenu()">
+        <div class="co-icon amber">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div class="co-body"><b>Assignment</b><span>Create work with a due date</span></div>
+      </a>
+
+      <div class="create-section-label">Share Content</div>
+
+      <a class="create-opt" href="{{ url_for('files.browse') }}?new=upload" onclick="closeCreateMenu()">
+        <div class="co-icon green">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <div class="co-body"><b>Study Material</b><span>Upload a file to any folder</span></div>
+      </a>
+
+      <a class="create-opt" href="{{ url_for('files.browse') }}?new=folder" onclick="closeCreateMenu()">
+        <div class="co-icon purple">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+        </div>
+        <div class="co-body"><b>Folder</b><span>Organize content in a folder</span></div>
+      </a>
+
+      <div class="create-section-label">Schedule</div>
+
+      <a class="create-opt" href="{{ url_for('teacher.timetable') }}?new=bulk" onclick="closeCreateMenu()">
+        <div class="co-icon teal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div class="co-body"><b>Bulk Timetable</b><span>Paste or upload schedule at once</span></div>
+      </a>
+
+      <a class="create-opt" href="{{ url_for('teacher.timetable') }}?new=entry" onclick="closeCreateMenu()">
+        <div class="co-icon red">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="14" x2="12" y2="18"/><line x1="10" y1="16" x2="14" y2="16"/></svg>
+        </div>
+        <div class="co-body"><b>Class Entry</b><span>Add a single class to timetable</span></div>
+      </a>
+
+      <a class="create-opt" href="{{ url_for('teacher.timetable') }}?new=official" onclick="closeCreateMenu()">
+        <div class="co-icon pink">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><text x="7.5" y="17" font-size="6.5" font-weight="700" fill="currentColor" stroke="none" font-family="Inter, sans-serif">PDF</text></svg>
+        </div>
+        <div class="co-body"><b>Official Timetable</b><span>Upload the college's PDF or image</span></div>
+      </a>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="preview-back" id="previewBack">
+  <div class="preview-shell">
+    <div class="preview-head">
+      <div class="title">
+        <span id="previewTitle">File</span>
+        <small id="previewSub"></small>
+      </div>
+      <div class="preview-actions">
+        <button class="btn outline sm" onclick="window.print()" title="Print">🖨️</button>
+        <button class="btn outline sm" onclick="closePreview()" title="Close">✕</button>
+      </div>
+    </div>
+    <div class="preview-body" id="previewBody"></div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}?v=6"></script>
+<script src="{{ url_for('static', filename='js/polish.js') }}?v=2"></script>
+<script src="{{ url_for('static', filename='js/create-menu.js') }}?v=1"></script>
+<script src="{{ url_for('static', filename='js/dropzone.js') }}?v=2"></script>
+<script src="{{ url_for('static', filename='js/loader.js') }}?v=1"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
