@@ -1,0 +1,140 @@
+{#
+  Reusable targeting UI with client-side cascading filters.
+  Branch dropdown is FILTERED to the current user's allowed branches.
+
+  Admin sees all branches.
+  Teacher / student_admin sees only their assigned branches.
+#}
+{% set _src = target_source if target_source is defined and target_source
+              else (current if current is defined and current else None) %}
+{% set _is_admin = current_user.is_authenticated and current_user.is_admin %}
+{% set _allowed_bids = ([] if _is_admin else (current_user.allowed_branch_ids() if current_user.is_authenticated else [])) %}
+
+<div class="form-row cols-2">
+  <div>
+    <label>Course</label>
+    <select name="course_id" class="target-course"
+            data-selected="{{ _src.course_id if _src and _src.course_id else '' }}">
+      <option value="">All courses</option>
+      {% for c in all_courses %}
+        <option value="{{ c.id }}"
+          {% if _src and _src.course_id == c.id %}selected{% endif %}>
+          {{ c.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label>Branch{% if not _is_admin %} <span style="color:var(--danger);">*</span>{% endif %}</label>
+    <select name="branch_id" class="target-branch"
+            data-selected="{{ _src.branch_id if _src and _src.branch_id else '' }}"
+            {% if not _is_admin %}required{% endif %}>
+      <option value="">{% if _is_admin %}All branches{% else %}Select your branch{% endif %}</option>
+      {% for b in all_branches %}
+        {% if _is_admin or b.id in _allowed_bids %}
+          <option value="{{ b.id }}"
+                  data-course-id="{{ b.course_id }}"
+            {% if _src and _src.branch_id == b.id %}selected{% endif %}>
+            {{ b.code }} — {{ b.name }}
+          </option>
+        {% endif %}
+      {% endfor %}
+    </select>
+    {% if not _is_admin and _allowed_bids|length == 0 %}
+      <p class="small" style="color:var(--danger);margin-top:4px;">
+        ⚠️ Aapko abhi koi branch assign nahi hui. Admin se sampark karo.
+      </p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="form-row cols-3">
+  <div>
+    <label>Year</label>
+    <select name="year_id" class="target-year"
+            data-selected="{{ _src.year_id if _src and _src.year_id else '' }}">
+      <option value="">All years</option>
+      {% for y in all_years %}
+        <option value="{{ y.id }}"
+          {% if _src and _src.year_id == y.id %}selected{% endif %}>
+          {{ y.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label>Semester</label>
+    <select name="semester_id" class="target-semester"
+            data-selected="{{ _src.semester_id if _src and _src.semester_id else '' }}">
+      <option value="">All semesters</option>
+      {% for s in all_semesters %}
+        <option value="{{ s.id }}"
+          {% if _src and _src.semester_id == s.id %}selected{% endif %}>
+          {{ s.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label>Section</label>
+    <select name="section_id" class="target-section"
+            data-selected="{{ _src.section_id if _src and _src.section_id else '' }}">
+      <option value="">All sections</option>
+      {% for s in all_sections %}
+        <option value="{{ s.id }}"
+                data-branch-id="{{ s.branch_id }}"
+                data-year-id="{{ s.year_id }}"
+          {% if _src and _src.section_id == s.id %}selected{% endif %}>
+          Section {{ s.name }}{% if s.branch %} ({{ s.branch.code }} · {{ s.year.name if s.year }}){% endif %}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+</div>
+
+<div class="form-row cols-2">
+  <div>
+    <label>Batch</label>
+    <select name="batch_id" class="target-batch"
+            data-selected="{{ _src.batch_id if _src and _src.batch_id else '' }}">
+      <option value="">All batches</option>
+      {% for b in all_batches %}
+        <option value="{{ b.id }}"
+                data-section-id="{{ b.section_id }}"
+          {% if _src and _src.batch_id == b.id %}selected{% endif %}>
+          {{ b.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label>Subject (optional)</label>
+    <select name="subject_id" class="target-subject"
+            data-selected="{{ _src.subject_id if _src and _src.subject_id else '' }}">
+      <option value="">Any subject</option>
+      {% for s in all_subjects %}
+        <option value="{{ s.id }}"
+                data-branch-id="{{ s.branch_id or '' }}"
+                data-semester-id="{{ s.semester_id or '' }}"
+          {% if _src and _src.subject_id == s.id %}selected{% endif %}>
+          {{ s.name }}{% if s.code %} ({{ s.code }}){% endif %}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+</div>
+
+{% if not _is_admin and _allowed_bids|length == 1 %}
+<script>
+  (function () {
+    var bid = "{{ _allowed_bids[0] }}";
+    document.querySelectorAll('.target-branch').forEach(function (sel) {
+      if (!sel.value && !sel.dataset.autofilled) {
+        sel.dataset.autofilled = '1';
+        sel.value = bid;
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+  })();
+</script>
+{% endif %}
