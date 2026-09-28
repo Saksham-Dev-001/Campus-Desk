@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+{% block title %}Requests — CampusDesk{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/requests.css') }}?v=1">
+
+{# SVG sprite #}
+<svg width="0" height="0" style="position:absolute;" aria-hidden="true">
+  <defs>
+    <symbol id="rq-message" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </symbol>
+    <symbol id="rq-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+    </symbol>
+    <symbol id="rq-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </symbol>
+    <symbol id="rq-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+    </symbol>
+    <symbol id="rq-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/>
+    </symbol>
+    <symbol id="rq-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2"/>
+      <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+      <line x1="3" y1="10" x2="21" y2="10"/>
+    </symbol>
+    <symbol id="rq-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+    </symbol>
+    <symbol id="rq-tag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+      <line x1="7" y1="7" x2="7.01" y2="7"/>
+    </symbol>
+    <symbol id="rq-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="page-head">
+  <div>
+    <h1>💬 Student Requests</h1>
+    <div class="sub">
+      {% if mode == 'teacher' %}Review and respond to student requests{% else %}Your submitted requests and their status{% endif %}
+    </div>
+  </div>
+  {% if mode == 'student' %}
+    <div class="actions">
+      <button class="btn" onclick="openModal('reqModal')">+ New Request</button>
+    </div>
+  {% endif %}
+</div>
+
+{# ============================================================
+   Stats summary (only if there are requests)
+   ============================================================ #}
+{% if requests %}
+  {% set pending = requests|selectattr('status','equalto','pending')|list|length %}
+  {% set in_prog = requests|selectattr('status','equalto','in_progress')|list|length %}
+  {% set resolved = requests|selectattr('status','equalto','resolved')|list|length %}
+  {% set rejected = requests|selectattr('status','equalto','rejected')|list|length %}
+  <div class="grid cols-4" style="margin-bottom:20px;">
+    <div class="stat">
+      <div class="label">Pending</div>
+      <div class="value">{{ pending }}</div>
+    </div>
+    <div class="stat">
+      <div class="label">In Progress</div>
+      <div class="value">{{ in_prog }}</div>
+    </div>
+    <div class="stat">
+      <div class="label">Resolved</div>
+      <div class="value">{{ resolved }}</div>
+    </div>
+    <div class="stat">
+      <div class="label">Rejected</div>
+      <div class="value">{{ rejected }}</div>
+    </div>
+  </div>
+{% endif %}
+
+{# ============================================================
+   Request list
+   ============================================================ #}
+{% if requests %}
+  <div class="req-list">
+    {% for r in requests %}
+      {% set st = r.status or 'pending' %}
+
+      {# Choose icon #}
+      {% if st == 'resolved' %}
+        {% set ico = 'rq-check' %}
+      {% elif st == 'rejected' %}
+        {% set ico = 'rq-x' %}
+      {% elif st == 'in_progress' %}
+        {% set ico = 'rq-spinner' %}
+      {% else %}
+        {% set ico = 'rq-message' %}
+      {% endif %}
+
+      <article class="req-card status-{{ st }}">
+
+        {# ---- Left icon ---- #}
+        <div class="req-icon">
+          <svg><use href="#{{ ico }}"/></svg>
+        </div>
+
+        {# ---- Body ---- #}
+        <div class="req-body">
+          <div class="req-title">{{ r.subject }}</div>
+
+          {% if r.description %}
+            <div class="req-desc">{{ r.description }}</div>
+          {% endif %}
+
+          <div class="req-meta">
+            <span class="req-cat">
+              <svg width="10" height="10"><use href="#rq-tag"/></svg>
+              {{ r.category }}
+            </span>
+
+            <span class="mi">
+              <svg><use href="#rq-calendar"/></svg>
+              {{ r.created_at.strftime('%d %b %Y') }}
+            </span>
+
+            {% if mode == 'teacher' and r.student %}
+              <span class="req-student">
+                <div class="mini-avatar" data-color="{{ r.student.user.avatar_color }}">
+                  {{ r.student.user.initials }}
+                </div>
+                <b>{{ r.student.user.name }}</b>
+                <span>{{ r.student.enrollment_number }}</span>
+              </span>
+            {% endif %}
+          </div>
+
+          {# Timeline (only for terminal states) #}
+          {% if st == 'resolved' %}
+            <div class="req-timeline">
+              <span class="step done"><span class="dot"></span> Submitted</span>
+              <span class="sep"></span>
+              <span class="step done"><span class="dot"></span> Resolved</span>
+            </div>
+          {% elif st == 'rejected' %}
+            <div class="req-timeline">
+              <span class="step done"><span class="dot"></span> Submitted</span>
+              <span class="sep"></span>
+              <span class="step" style="color:var(--danger);"><span class="dot" style="background:var(--danger);"></span> Rejected</span>
+            </div>
+          {% endif %}
+        </div>
+
+        {# ---- Right side ---- #}
+        <div class="req-side">
+          {# Status pill #}
+          <span class="req-status {{ st }}">
+            <svg>
+              {% if st == 'resolved' %}<use href="#rq-check"/>
+              {% elif st == 'rejected' %}<use href="#rq-x"/>
+              {% elif st == 'in_progress' %}<use href="#rq-spinner"/>
+              {% else %}<use href="#rq-clock"/>
+              {% endif %}
+            </svg>
+            {{ st.replace('_', ' ')|title }}
+          </span>
+
+          {# Teacher: status update form #}
+          {% if mode == 'teacher' %}
+            <form method="post" class="req-form">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="request_id" value="{{ r.id }}">
+              <select name="status">
+                <option value="pending"     {% if st == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="in_progress" {% if st == 'in_progress' %}selected{% endif %}>In Progress</option>
+                <option value="resolved"    {% if st == 'resolved' %}selected{% endif %}>Resolved</option>
+                <option value="rejected"    {% if st == 'rejected' %}selected{% endif %}>Rejected</option>
+              </select>
+              <button type="submit">Update</button>
+            </form>
+          {% endif %}
+        </div>
+
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="req-empty">
+    <div class="empty-illust">💬</div>
+    <h3>No requests yet</h3>
+    <p>
+      {% if mode == 'teacher' %}
+        Student requests will appear here. Once submitted, you can update their status.
+      {% else %}
+        Submit a request when you need help. Teachers will review and respond.
+      {% endif %}
+    </p>
+    {% if mode == 'student' %}
+      <button class="btn" onclick="openModal('reqModal')">+ New Request</button>
+    {% endif %}
+  </div>
+{% endif %}
+
+{# ============================================================
+   New Request modal (student)
+   ============================================================ #}
+{% if mode == 'student' %}
+<div class="modal-back" id="reqModal">
+  <form class="modal" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="modal-head">
+      <h2>Submit Request</h2>
+      <button type="button" class="btn ghost sm" onclick="closeModal('reqModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>Category</label>
+        <select name="category">
+          <option>Academic</option>
+          <option>Administrative</option>
+          <option>Technical</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Subject</label>
+        <input type="text" name="subject" required placeholder="Short headline of your request" maxlength="160">
+      </div>
+      <div class="form-row">
+        <label>Description</label>
+        <textarea name="description" placeholder="Explain your request in detail…" rows="5"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn outline" onclick="closeModal('reqModal')">Cancel</button>
+      <button class="btn">Submit Request</button>
+    </div>
+  </form>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  document.querySelectorAll('.mini-avatar[data-color]').forEach(function (el) {
+    var c = el.getAttribute('data-color');
+    if (c) el.style.backgroundImage = c;
+  });
+})();
+</script>
+{% endblock %}
