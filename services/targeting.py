@@ -29,12 +29,15 @@ def matches(student, obj):
 
 def visible_students(model_row):
     from models import Student
-    q = Student.query
+    from sqlalchemy.orm import joinedload
+    q = Student.query.options(joinedload(Student.user), joinedload(Student.section), joinedload(Student.batch), joinedload(Student.branch))
     for field in TARGET_FIELDS:
         v = getattr(model_row, field, None)
         if v is not None:
             q = q.filter(getattr(Student, field) == v)
     return q.all()
+
+_target_name_cache = {}
 
 def target_label(row):
     """Return a short human-readable target summary, e.g. 'CSE · 1st Year · Section A · A2'."""
@@ -52,9 +55,13 @@ def target_label(row):
     for field, Model, getter in pairs:
         vid = getattr(row, field, None)
         if vid:
-            obj = Model.query.get(vid)
-            if obj:
-                parts.append(getter(obj))
+            cache_key = (Model.__tablename__, vid)
+            if cache_key not in _target_name_cache:
+                obj = Model.query.get(vid)
+                _target_name_cache[cache_key] = getter(obj) if obj else None
+            val = _target_name_cache[cache_key]
+            if val:
+                parts.append(val)
     return " · ".join(parts) if parts else "Everyone"
 
 def enforce_teacher_scope(user, branch_id):
