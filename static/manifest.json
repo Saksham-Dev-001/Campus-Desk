@@ -1,30 +1,42 @@
 {
   "name": "CampusDesk",
   "short_name": "CampusDesk",
-  "description": "A Smart Data Organizer — College information & document management, right info, right student, right time.",
+  "description": "College information & document management — right info, right student, right time.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#060b18",
+  "background_color": "#0e1428",
   "theme_color": "#0284c7",
   "icons": [
     {
       "src": "/static/img/logo-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/static/img/logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/static/img/logo-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/static/img/logo.png",
-      "sizes": "1024x1024",
+      "src": "/static/img/logo-512.png",
+      "sizes": "512x512",
       "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/static/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
       "purpose": "any"
     }
   ]
