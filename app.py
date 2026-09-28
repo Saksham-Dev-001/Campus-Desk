@@ -137,6 +137,8 @@ def create_app():
     @app.route("/profile")
     @login_required
     def profile_redirect():
+        if current_user.role in ("teacher", "admin"):
+            return redirect(url_for("teacher.profile"))
         return redirect(url_for("student.profile"))
 
     @app.route("/manifest.json")
