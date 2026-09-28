@@ -802,5 +802,10 @@ Tue 09:00-10:00 Programming Lab 3
       window.prompt('Copy this link:', url);
     }
   }
+
+  // Auto-open bulk import modal if navigated from quick actions (?new=bulk)
+  if (new URLSearchParams(window.location.search).get('new') === 'bulk') {
+    openModal('bulkModal');
+  }
 </script>
 {% endblock %}
