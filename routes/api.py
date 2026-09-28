@@ -1,5 +1,5 @@
-"""JSON APIs - targeting + notifications + preview + folder tree."""
 from datetime import datetime
+from services.time_utils import now_ist
 from io import BytesIO
 from flask import Blueprint, jsonify, request, abort, send_file, current_app
 from flask_login import login_required, current_user
@@ -81,7 +81,7 @@ def subjects():
 def _time_ago(dt):
     if not dt:
         return ""
-    delta = datetime.utcnow() - dt
+    delta = now_ist() - dt
     s = int(delta.total_seconds())
     if s < 60:
         return "just now"
