@@ -680,5 +680,10 @@ function recalcTrackerStats(aid) {
   var tabPend = document.getElementById('tabPendCount-' + aid);
   if (tabPend) tabPend.textContent = pending;
 }
+
+// Auto-open create modal if navigated from quick actions (?new=1)
+if (new URLSearchParams(window.location.search).get('new') === '1') {
+  openModal('assignModal');
+}
 </script>
 {% endblock %}
