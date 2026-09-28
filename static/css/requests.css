@@ -1,0 +1,337 @@
+/* =====================================================================
+   CampusDesk - Premium student request cards
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   List
+   --------------------------------------------------------------------- */
+.req-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+/* ---------------------------------------------------------------------
+   Request card
+   --------------------------------------------------------------------- */
+.req-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 52px 1fr auto;
+  gap: 18px;
+  align-items: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  transition: all .18s ease;
+  overflow: hidden;
+}
+.req-card::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--accent);
+  transition: opacity .18s;
+}
+.req-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+/* Status variants */
+.req-card.status-pending::before     { background: var(--warn); }
+.req-card.status-in_progress::before { background: var(--accent); }
+.req-card.status-resolved::before    { background: var(--success); }
+.req-card.status-rejected::before    { background: var(--danger); }
+
+.req-card.status-resolved {
+  background: linear-gradient(90deg, rgba(16,185,129,.03), var(--surface) 40%);
+}
+.req-card.status-rejected {
+  background: linear-gradient(90deg, rgba(225,29,72,.03), var(--surface) 40%);
+  opacity: .85;
+}
+
+/* ---------------------------------------------------------------------
+   Icon tile
+   --------------------------------------------------------------------- */
+.req-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: var(--warn-soft);
+  color: var(--warn);
+  transition: transform .2s ease;
+}
+.req-icon svg { width: 24px; height: 24px; stroke-width: 1.75; }
+.req-card:hover .req-icon { transform: scale(1.05); }
+
+.req-card.status-in_progress .req-icon { background: var(--accent-soft); color: var(--accent); }
+.req-card.status-resolved .req-icon    { background: rgba(16,185,129,.12); color: var(--success); }
+.req-card.status-rejected .req-icon    { background: rgba(225,29,72,.12); color: var(--danger); }
+
+/* ---------------------------------------------------------------------
+   Body
+   --------------------------------------------------------------------- */
+.req-body { min-width: 0; }
+
+.req-title {
+  font-size: 15.5px;
+  font-weight: 650;
+  color: var(--text);
+  letter-spacing: -.15px;
+  line-height: 1.4;
+  margin-bottom: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.req-desc {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.55;
+  margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Meta row */
+.req-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.req-meta .mi {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.req-meta .mi svg {
+  width: 13px;
+  height: 13px;
+  opacity: .7;
+  stroke-width: 2;
+}
+
+/* Category chip */
+.req-cat {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+  letter-spacing: .3px;
+  text-transform: uppercase;
+}
+
+/* Student mini-chip (teacher view) */
+.req-student {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+}
+.req-student .mini-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #2b5cff, #7c3aed);
+}
+.req-student b {
+  font-weight: 600;
+  color: var(--text);
+}
+.req-student span {
+  color: var(--text-3);
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+}
+
+/* ---------------------------------------------------------------------
+   Right side (status + actions)
+   --------------------------------------------------------------------- */
+.req-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+  min-width: 140px;
+}
+
+/* Status pill */
+.req-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  white-space: nowrap;
+}
+.req-status svg { width: 11px; height: 11px; stroke-width: 2.5; }
+
+.req-status.pending     { background: rgba(217,119,6,.14);  color: var(--warn); }
+.req-status.in_progress { background: var(--accent-soft);   color: var(--accent); }
+.req-status.resolved    { background: rgba(16,185,129,.14); color: var(--success); }
+.req-status.rejected    { background: rgba(225,29,72,.14);  color: var(--danger); }
+
+/* Status form (teacher) */
+.req-form {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.req-form select {
+  padding: 7px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  font-family: inherit;
+  cursor: pointer;
+  min-width: 130px;
+}
+.req-form select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.req-form button {
+  padding: 7px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .14s;
+}
+.req-form button:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+/* ---------------------------------------------------------------------
+   Status timeline (resolved/rejected cards get checkmark)
+   --------------------------------------------------------------------- */
+.req-timeline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--text-3);
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.req-timeline .step {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.req-timeline .step .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border-strong);
+}
+.req-timeline .step.done .dot { background: var(--success); }
+.req-timeline .step.active .dot {
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.req-timeline .sep {
+  width: 16px;
+  height: 1px;
+  background: var(--border-strong);
+}
+.req-timeline .step.done + .sep { background: var(--success); }
+
+/* ---------------------------------------------------------------------
+   Empty state
+   --------------------------------------------------------------------- */
+.req-empty {
+  text-align: center;
+  padding: 60px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+.req-empty .empty-illust {
+  width: 88px; height: 88px;
+  margin: 0 auto 18px;
+  border-radius: 22px;
+  background: var(--surface-3);
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  font-size: 38px;
+}
+.req-empty h3 { font-size: 17px; margin-bottom: 6px; }
+.req-empty p { color: var(--text-2); max-width: 380px; margin: 0 auto 20px; line-height: 1.6; }
+
+/* ---------------------------------------------------------------------
+   Mobile
+   --------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .req-card {
+    grid-template-columns: 44px 1fr;
+    gap: 14px;
+    padding: 16px;
+    border-radius: 12px;
+  }
+  .req-icon { width: 44px; height: 44px; border-radius: 11px; }
+  .req-icon svg { width: 22px; height: 22px; }
+  .req-title { font-size: 14.5px; }
+  .req-desc { font-size: 12.5px; -webkit-line-clamp: 2; }
+
+  .req-side {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-top: 4px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    min-width: 0;
+  }
+  .req-form { flex: 1; }
+  .req-form select { flex: 1; min-width: 0; }
+}
