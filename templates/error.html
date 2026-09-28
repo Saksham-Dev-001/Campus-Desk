@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ code }} — CampusDesk{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="empty" style="padding:60px 20px;">
+    <h1 style="font-size:60px;color:var(--accent);margin-bottom:8px;line-height:1;">{{ code }}</h1>
+    <h3>{{ message }}</h3>
+    <a href="{{ url_for('dashboard') }}" class="btn" style="margin-top:18px;">← Back to dashboard</a>
+  </div>
+</div>
+{% endblock %}
