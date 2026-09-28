@@ -572,5 +572,14 @@ function deleteFolder(id, name) {
   closeAllMenus();
   openModal('deleteConfirmModal');
 }
+
+// Auto-open upload modal if navigated from quick actions (?new=upload)
+if (new URLSearchParams(window.location.search).get('new') === 'upload') {
+  if (typeof openUploadModal === 'function') {
+    openUploadModal();
+  } else {
+    openModal('uploadModal');
+  }
+}
 </script>
 {% endblock %}
