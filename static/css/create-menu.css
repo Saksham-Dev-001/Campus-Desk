@@ -1,0 +1,238 @@
+/* =====================================================================
+   CampusDesk - YouTube-style Create button + menu
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   Topbar create button
+   --------------------------------------------------------------------- */
+.create-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 15px 8px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .14s;
+  font-family: inherit;
+  flex-shrink: 0;
+  height: 38px;
+}
+.create-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.create-btn:hover {
+  background: var(--surface);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(43,92,255,.12);
+}
+.create-btn:active { transform: translateY(0); }
+
+@media (max-width: 900px) {
+  .create-btn span { display: none; }
+  .create-btn { padding: 8px 10px; width: 38px; justify-content: center; }
+}
+
+/* ---------------------------------------------------------------------
+   Create menu (full-screen overlay)
+   --------------------------------------------------------------------- */
+.create-back {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 10, 20, .72);
+  backdrop-filter: blur(8px);
+  z-index: 250;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: cm-fadeIn .18s ease;
+}
+.create-back.show { display: flex; }
+@keyframes cm-fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.create-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 720px;
+  max-height: 90vh;
+  overflow: auto;
+  box-shadow: 0 30px 80px rgba(0,0,0,.4);
+  animation: cm-pop .26s cubic-bezier(.16,1,.3,1);
+}
+@keyframes cm-pop {
+  from { opacity: 0; transform: translateY(16px) scale(.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.create-head {
+  padding: 22px 26px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.create-head h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -.3px;
+}
+.create-head .sub {
+  display: block;
+  font-size: 12.5px;
+  color: var(--text-3);
+  margin-top: 3px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+/* ---------------------------------------------------------------------
+   Options grid
+   --------------------------------------------------------------------- */
+.create-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  padding: 8px 26px 26px;
+}
+@media (max-width: 700px) {
+  .create-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+}
+@media (max-width: 400px) {
+  .create-grid { grid-template-columns: 1fr; }
+}
+
+.create-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px 18px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  transition: all .18s ease;
+  position: relative;
+  overflow: hidden;
+}
+.create-opt::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  background: radial-gradient(circle at top left, rgba(43,92,255,.08), transparent 60%);
+  opacity: 0;
+  transition: opacity .2s;
+  pointer-events: none;
+}
+.create-opt:hover {
+  background: var(--surface);
+  border-color: var(--accent);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(15,23,42,.1), 0 0 0 3px var(--accent-soft);
+}
+.create-opt:hover::before { opacity: 1; }
+.create-opt:active { transform: translateY(-1px); }
+
+.co-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  transition: transform .2s;
+  position: relative;
+  z-index: 1;
+}
+.create-opt:hover .co-icon { transform: scale(1.08) rotate(-3deg); }
+.co-icon svg {
+  width: 26px;
+  height: 26px;
+  stroke-width: 1.75;
+}
+
+.co-body {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+.co-body b {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 650;
+  color: var(--text);
+  letter-spacing: -.15px;
+  margin-bottom: 3px;
+  line-height: 1.3;
+}
+.co-body span {
+  display: block;
+  font-size: 12px;
+  color: var(--text-3);
+  line-height: 1.4;
+}
+
+/* Color variants */
+.co-icon.blue    { background: rgba(43,92,255,.12);  color: #2b5cff; }
+.co-icon.purple  { background: rgba(124,58,237,.12); color: #7c3aed; }
+.co-icon.amber   { background: rgba(217,119,6,.12);  color: #d97706; }
+.co-icon.green   { background: rgba(5,150,105,.12);  color: #059669; }
+.co-icon.red     { background: rgba(220,38,38,.12);  color: #dc2626; }
+.co-icon.teal    { background: rgba(15,118,110,.12); color: #0f766e; }
+.co-icon.pink    { background: rgba(219,39,119,.12); color: #db2777; }
+
+/* ---------------------------------------------------------------------
+   Section labels in the grid (optional)
+   --------------------------------------------------------------------- */
+.create-section-label {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-3);
+  padding: 14px 4px 0;
+  margin-bottom: -2px;
+}
+.create-section-label:first-child { padding-top: 0; }
+
+/* ---------------------------------------------------------------------
+   Mobile sheet
+   --------------------------------------------------------------------- */
+@media (max-width: 600px) {
+  .create-back { padding: 0; align-items: flex-end; }
+  .create-modal {
+    border-radius: 20px 20px 0 0;
+    max-height: 88vh;
+    animation: cm-slideUp .28s cubic-bezier(.16,1,.3,1);
+  }
+  @keyframes cm-slideUp {
+    from { opacity: 0; transform: translateY(100%); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .create-head { padding: 18px 20px 10px; }
+  .create-head h2 { font-size: 17px; }
+  .create-grid { padding: 6px 16px 20px; gap: 10px; }
+  .create-opt { padding: 16px 14px; }
+  .co-icon { width: 44px; height: 44px; border-radius: 12px; }
+  .co-icon svg { width: 22px; height: 22px; }
+  .co-body b { font-size: 13.5px; }
+  .co-body span { font-size: 11.5px; }
+}
