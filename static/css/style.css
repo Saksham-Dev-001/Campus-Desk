@@ -592,6 +592,23 @@ h3 { font-size: 15px; font-weight: 700; }
   .grid.cols-3 { grid-template-columns: repeat(2, 1fr); }
 }
 
+.dashboard-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+.dashboard-col {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+@media(max-width: 900px) {
+  .dashboard-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Stat card with Multicolor accents */
 .stat {
   position: relative;
