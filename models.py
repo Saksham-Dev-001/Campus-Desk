@@ -1,5 +1,5 @@
-"""CampusDesk database schema."""
 from datetime import datetime
+from services.time_utils import now_ist
 import hashlib
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
@@ -27,7 +27,7 @@ class User(UserMixin, db.Model):
     name = db.Column(db.String(120), nullable=False)
     email = db.Column(db.String(160))
     active = db.Column(db.Boolean, default=True, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_ist)
 
     student = db.relationship("Student", backref="user", uselist=False,
                               cascade="all, delete-orphan")
@@ -321,7 +321,7 @@ class Folder(db.Model):
     name = db.Column(db.String(160), nullable=False)
     parent_id = db.Column(db.Integer, db.ForeignKey("folders.id"))
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_ist)
 
     # FIX: cascade so deleting a parent auto-deletes children and files,
     # instead of orphaning them at the root.
@@ -358,8 +358,8 @@ class FileRecord(db.Model):
     storage_provider = db.Column(db.String(40), nullable=False)
     storage_ref = db.Column(db.Text, nullable=False)
     uploaded_by = db.Column(db.Integer, db.ForeignKey("users.id"))
-    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    uploaded_at = db.Column(db.DateTime, default=now_ist)
+    updated_at = db.Column(db.DateTime, default=now_ist, onupdate=now_ist)
     uploader = db.relationship("User", foreign_keys=[uploaded_by])
     course_id = _target_columns()["course_id"]
     branch_id = _target_columns()["branch_id"]
@@ -411,7 +411,7 @@ class FileVersion(db.Model):
     original_filename = db.Column(db.String(255))
     size_bytes = db.Column(db.Integer, default=0)
     uploaded_by = db.Column(db.Integer, db.ForeignKey("users.id"))
-    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    uploaded_at = db.Column(db.DateTime, default=now_ist)
     file = db.relationship("FileRecord",
                            backref=db.backref("versions", cascade="all, delete-orphan"))
 
@@ -422,7 +422,7 @@ class Notice(db.Model):
     description = db.Column(db.Text)
     priority = db.Column(db.String(20), default="normal")
     attachment_file_id = db.Column(db.Integer, db.ForeignKey("files.id", ondelete="SET NULL"))
-    publish_date = db.Column(db.DateTime, default=datetime.utcnow)
+    publish_date = db.Column(db.DateTime, default=now_ist)
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"))
     active = db.Column(db.Boolean, default=True)
     attachment = db.relationship("FileRecord")
@@ -441,7 +441,7 @@ class Assignment(db.Model):
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
     attachment_file_id = db.Column(db.Integer, db.ForeignKey("files.id", ondelete="SET NULL"))
-    publish_date = db.Column(db.DateTime, default=datetime.utcnow)
+    publish_date = db.Column(db.DateTime, default=now_ist)
     due_date = db.Column(db.DateTime)
     status = db.Column(db.String(20), default="open")
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"))
@@ -463,7 +463,7 @@ class Assignment(db.Model):
     def days_left(self):
         if not self.due_date:
             return None
-        delta = (self.due_date - datetime.utcnow()).days
+        delta = (self.due_date - now_ist()).days
         return delta
 
     def submission_for(self, student):
@@ -480,7 +480,7 @@ class AssignmentSubmission(db.Model):
     assignment_id = db.Column(db.Integer, db.ForeignKey("assignments.id"), nullable=False)
     student_id = db.Column(db.Integer, db.ForeignKey("students.id"), nullable=False)
     file_id = db.Column(db.Integer, db.ForeignKey("files.id", ondelete="SET NULL"))
-    submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    submitted_at = db.Column(db.DateTime, default=now_ist)
     status = db.Column(db.String(20), default="submitted")
     note = db.Column(db.Text)
     grade = db.Column(db.String(10))
@@ -522,7 +522,7 @@ class Notification(db.Model):
     message = db.Column(db.Text)
     link = db.Column(db.String(255))
     read = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_ist)
 
 class StudentRequest(db.Model):
     __tablename__ = "requests"
@@ -533,8 +533,8 @@ class StudentRequest(db.Model):
     description = db.Column(db.Text)
     attachment_file_id = db.Column(db.Integer, db.ForeignKey("files.id", ondelete="SET NULL"))
     status = db.Column(db.String(20), default="pending")
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_ist)
+    updated_at = db.Column(db.DateTime, default=now_ist, onupdate=now_ist)
     handled_by = db.Column(db.Integer, db.ForeignKey("users.id"))
     student = db.relationship("Student", backref="requests")
     attachment = db.relationship("FileRecord")
@@ -548,7 +548,7 @@ class AuditLog(db.Model):
     entity = db.Column(db.String(60))
     entity_id = db.Column(db.Integer)
     details = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=now_ist)
     user = db.relationship("User")
 
 class StorageMapping(db.Model):
