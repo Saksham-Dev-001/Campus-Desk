@@ -1,0 +1,684 @@
+{% extends "base.html" %}
+{% block title %}Assignments — CampusDesk{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/assignments.css') }}?v=3">
+
+{# SVG sprite #}
+<svg width="0" height="0" style="position:absolute;" aria-hidden="true">
+  <defs>
+    <symbol id="asg-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+    </symbol>
+    <symbol id="asg-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </symbol>
+    <symbol id="asg-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+    </symbol>
+    <symbol id="asg-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2"/>
+      <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+      <line x1="3" y1="10" x2="21" y2="10"/>
+    </symbol>
+    <symbol id="asg-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+    </symbol>
+    <symbol id="asg-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+    </symbol>
+    <symbol id="asg-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+    </symbol>
+    <symbol id="asg-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </symbol>
+    <symbol id="asg-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+    </symbol>
+    <symbol id="asg-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+    </symbol>
+    <symbol id="asg-paperclip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+    </symbol>
+    <symbol id="asg-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+    </symbol>
+    <symbol id="asg-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="page-head">
+  <div>
+    <h1>📝 Assignments</h1>
+    <div class="sub">
+      {% if mode == 'teacher' %}Create assignments with attachments and track offline submissions{% else %}Your course assignments, question papers and submission status{% endif %}
+    </div>
+  </div>
+  {% if mode == 'teacher' %}
+    <div class="actions">
+      <button class="btn" onclick="openModal('assignModal')">+ Create Assignment</button>
+    </div>
+  {% endif %}
+</div>
+
+{% if assignments %}
+  <div class="asg-grid">
+    {% for a in assignments %}
+      {# -------- status logic -------- #}
+      {% set is_closed = a.status == 'closed' %}
+      {% set days_left = a.days_left %}
+      {% set is_overdue = (not is_closed) and (days_left is not none) and (days_left < 0) %}
+      {% set is_soon = (not is_closed) and (days_left is not none) and (days_left >= 0) and (days_left <= 2) %}
+
+      {% if is_closed %}
+        {% set status_cls = 'closed' %}
+        {% set status_text = 'Closed' %}
+      {% elif is_overdue %}
+        {% set status_cls = 'overdue' %}
+        {% set status_text = 'Overdue' %}
+      {% else %}
+        {% set status_cls = 'open' %}
+        {% set status_text = 'Open' %}
+      {% endif %}
+
+      {% set card_cls = 'closed' if is_closed else ('overdue' if is_overdue else ('soon' if is_soon else '')) %}
+
+      <article class="asg-card {{ card_cls }}" id="asgCard-{{ a.id }}">
+
+        {# ---- Header ---- #}
+        <header class="asg-head">
+          <div class="asg-icon">
+            <svg><use href="#asg-book"/></svg>
+          </div>
+          <div class="asg-head-info">
+            {% if a.subject %}
+              <span class="asg-subject">
+                <svg><use href="#asg-book"/></svg>
+                {{ a.subject.name }}
+              </span>
+            {% else %}
+              <span class="asg-subject">Assignment</span>
+            {% endif %}
+            {% if a.author %}
+              <span class="asg-author">by {{ a.author.name }}</span>
+            {% endif %}
+          </div>
+          <span class="asg-status {{ status_cls }}">{{ status_text }}</span>
+        </header>
+
+        {# ---- Body ---- #}
+        <div class="asg-body">
+          <h3 class="asg-title">{{ a.title }}</h3>
+          {% if a.description %}
+            <p class="asg-desc">{{ a.description }}</p>
+          {% endif %}
+
+          {# Due date strip #}
+          {% if a.due_date %}
+            <div class="asg-due">
+              <svg><use href="#asg-calendar"/></svg>
+              <span class="due-label">
+                {% if is_overdue %}
+                  Overdue
+                {% elif is_closed %}
+                  Was due
+                {% else %}
+                  Due
+                {% endif %}
+              </span>
+              <span class="due-time">{{ a.due_date.strftime('%d %b %Y · %I:%M %p') }}</span>
+              {% if not is_closed and days_left is not none %}
+                {% if days_left < 0 %}
+                  <span class="days-pill">{{ -days_left }}d late</span>
+                {% elif days_left == 0 %}
+                  <span class="days-pill">Due Today</span>
+                {% else %}
+                  <span class="days-pill">{{ days_left }}d left</span>
+                {% endif %}
+              {% endif %}
+            </div>
+          {% endif %}
+
+          {# Target audience chips #}
+          {% if a.branch or a.year or a.section or a.batch or a.course %}
+            <div class="asg-chips">
+              <span class="chip">
+                <svg><use href="#asg-target"/></svg>
+                {% if a.branch %}{{ a.branch.code }}{% else %}All branches{% endif %}
+                {% if a.year %} · {{ a.year.name }}{% endif %}
+                {% if a.section %} · Sec {{ a.section.name }}{% endif %}
+                {% if a.batch %} · {{ a.batch.name }}{% endif %}
+              </span>
+            </div>
+          {% endif %}
+
+          {# Attached Question Paper / Resource File #}
+          {% if a.attachment %}
+            <div class="asg-attachment-box">
+              <div class="asg-att-icon">{{ a.attachment.icon }}</div>
+              <div class="asg-att-details">
+                <span class="asg-att-name" title="{{ a.attachment.filename }}">{{ a.attachment.filename }}</span>
+                <span class="asg-att-meta">{{ a.attachment.ext|upper }} · {{ a.attachment.size_formatted }}</span>
+              </div>
+              <div class="asg-att-actions">
+                {% if a.attachment.is_previewable %}
+                  <button type="button" class="asg-btn sm ghost"
+                          onclick="previewFile({{ a.attachment.id }}, '{{ a.attachment.filename|e }}', '{{ a.attachment.mime_type or '' }}')"
+                          title="Preview file">
+                    <svg><use href="#asg-eye"/></svg>
+                    Preview
+                  </button>
+                {% endif %}
+                <a href="{{ url_for('files.download_file', fid=a.attachment.id) }}"
+                   class="asg-btn sm" title="Download file">
+                  <svg><use href="#asg-download"/></svg>
+                  Download
+                </a>
+              </div>
+            </div>
+          {% endif %}
+
+          {# -------------- Student View (Offline Submission Status) -------------- #}
+          {% if mode == 'student' %}
+            {% set sub = submissions.get(a.id) %}
+            {% if sub %}
+              {# Marked as submitted by teacher #}
+              <div class="asg-offline-card verified">
+                <div class="sc-badge-row">
+                  <span class="sc-badge-pill verified">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><use href="#asg-check"/></svg>
+                    Submitted Offline &amp; Verified
+                  </span>
+                  {% if sub.grade %}
+                    <span class="sc-grade-badge">Grade: <b>{{ sub.grade }}</b></span>
+                  {% endif %}
+                </div>
+                <div class="sc-offline-info">
+                  <span>Verified by faculty on {{ sub.submitted_at.strftime('%d %b %Y · %I:%M %p') }}</span>
+                </div>
+                {% if sub.feedback %}
+                  <div class="sc-feedback-bubble">
+                    <span class="fb-label">Teacher Remarks</span>
+                    <p class="fb-text">{{ sub.feedback }}</p>
+                  </div>
+                {% endif %}
+              </div>
+
+            {% elif not is_closed %}
+              {# Pending physical offline submission #}
+              <div class="asg-offline-card pending">
+                <div class="sc-badge-row">
+                  <span class="sc-badge-pill pending">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><use href="#asg-clock"/></svg>
+                    Offline Submission
+                  </span>
+                </div>
+                <div class="sc-offline-instructions">
+                  <p class="instr-title">🏫 Submit physical work to faculty</p>
+                  <p class="instr-desc">Complete this assignment and submit your notebook/sheets directly to your teacher in class. Your teacher will verify and record your grade here.</p>
+                </div>
+              </div>
+
+            {% else %}
+              {# Closed without submission #}
+              <div class="asg-offline-card closed">
+                <div class="sc-badge-row">
+                  <span class="sc-badge-pill closed">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><use href="#asg-x"/></svg>
+                    Not Submitted · Closed
+                  </span>
+                </div>
+                <p class="sc-closed-text">This assignment is closed. Physical submissions are no longer accepted.</p>
+              </div>
+            {% endif %}
+          {% endif %}
+
+        </div>
+
+        {# -------------- Teacher Footer & Submission Tracker -------------- #}
+        {% if mode == 'teacher' %}
+          {% set asg_meta = assignment_data.get(a.id, {}) %}
+          {% set total_t = asg_meta.total_targeted or 0 %}
+          {% set total_s = asg_meta.total_submitted or 0 %}
+          {% set total_p = asg_meta.total_pending or 0 %}
+          {% set pct = asg_meta.percent or 0 %}
+
+          {# Progress Summary Bar #}
+          <div class="asg-tracker-summary">
+            <div class="asg-ts-row">
+              <span class="asg-ts-label">
+                <svg><use href="#asg-users"/></svg>
+                <span id="tsSubCount-{{ a.id }}">{{ total_s }}</span> of {{ total_t }} Submitted Offline
+              </span>
+              <span class="asg-ts-pct" id="tsPct-{{ a.id }}">{{ pct }}%</span>
+            </div>
+            <div class="asg-progress-track">
+              <div class="asg-progress-fill" id="tsProgressFill-{{ a.id }}" style="width: {{ pct }}%;"></div>
+            </div>
+          </div>
+
+          {# Teacher Actions Footer #}
+          <footer class="asg-foot">
+            <button type="button" class="asg-btn primary"
+                    onclick="toggleTracker({{ a.id }})" id="btnTrackerToggle-{{ a.id }}">
+              <svg><use href="#asg-users"/></svg>
+              <span>Track &amp; Mark</span>
+              <span class="asg-count-pill" id="btnCountPill-{{ a.id }}">{{ total_s }}/{{ total_t }}</span>
+              <span class="chevron-arrow" id="chevron-{{ a.id }}">▾</span>
+            </button>
+            <div class="asg-foot-actions">
+              {% if a.status == 'open' %}
+                <form method="post" action="{{ url_for('teacher.close_assignment', aid=a.id) }}"
+                      onsubmit="return confirm('Close this assignment?')">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="asg-btn sm" title="Close Assignment">
+                    <svg><use href="#asg-x"/></svg>
+                    Close
+                  </button>
+                </form>
+              {% else %}
+                <form method="post" action="{{ url_for('teacher.reopen_assignment', aid=a.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="asg-btn sm" title="Reopen Assignment">
+                    <svg><use href="#asg-refresh"/></svg>
+                    Reopen
+                  </button>
+                </form>
+              {% endif %}
+              <form method="post" action="{{ url_for('teacher.delete_assignment', aid=a.id) }}"
+                    onsubmit="return confirm('Delete this assignment completely? Submissions and attachment will be removed.')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="asg-btn sm danger" title="Delete Assignment">
+                  <svg><use href="#asg-trash"/></svg>
+                </button>
+              </form>
+            </div>
+          </footer>
+
+          {# Interactive Offline Submissions Tracker Panel #}
+          <div class="asg-tracker-drawer" id="trackerDrawer-{{ a.id }}" style="display: none;">
+            <div class="asg-tracker-header">
+              <div class="tracker-filter-group">
+                <input type="text" class="asg-search-input"
+                       placeholder="🔍 Search student name or roll..."
+                       oninput="filterRoster({{ a.id }}, this.value)">
+                <div class="asg-filter-tabs">
+                  <button type="button" class="tab-btn active" data-filter="all" onclick="filterTab({{ a.id }}, 'all', this)">
+                    All (<span class="tab-count-all">{{ total_t }}</span>)
+                  </button>
+                  <button type="button" class="tab-btn" data-filter="submitted" onclick="filterTab({{ a.id }}, 'submitted', this)">
+                    ✓ Submitted (<span class="tab-count-sub" id="tabSubCount-{{ a.id }}">{{ total_s }}</span>)
+                  </button>
+                  <button type="button" class="tab-btn" data-filter="pending" onclick="filterTab({{ a.id }}, 'pending', this)">
+                    ⏳ Pending (<span class="tab-count-pend" id="tabPendCount-{{ a.id }}">{{ total_p }}</span>)
+                  </button>
+                </div>
+              </div>
+              {% if total_p > 0 and a.status == 'open' %}
+                <form method="post" action="{{ url_for('teacher.mark_all_students', aid=a.id) }}"
+                      onsubmit="return confirm('Mark all {{ total_p }} remaining students as submitted offline?')"
+                      style="display:inline;">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="asg-btn sm" title="Mark all remaining students as submitted">
+                    ✓ Mark All ({{ total_p }})
+                  </button>
+                </form>
+              {% endif %}
+            </div>
+
+            {# Student Roster List #}
+            <div class="asg-roster-list" id="rosterList-{{ a.id }}">
+              {% for item in asg_meta.roster %}
+                {% set st = item.student %}
+                {% set sub = item.submission %}
+                {% set is_sub = item.is_submitted %}
+                <div class="asg-roster-row {{ 'is-submitted' if is_sub else 'is-pending' }}"
+                     data-student-id="{{ st.id }}"
+                     data-name="{{ (st.user.name or '')|lower }}"
+                     data-roll="{{ (st.roll_number or st.enrollment_number or '')|lower }}"
+                     data-status="{{ 'submitted' if is_sub else 'pending' }}"
+                     id="rosterRow-{{ a.id }}-{{ st.id }}">
+
+                  <div class="asg-r-user">
+                    <div class="avatar" data-color="{{ st.user.avatar_color }}"
+                         style="width:34px;height:34px;font-size:11px;border-radius:10px;flex-shrink:0;">
+                      {{ st.user.initials }}
+                    </div>
+                    <div class="user-meta">
+                      <span class="user-name">{{ st.user.name }}</span>
+                      <span class="user-sub">
+                        {{ st.roll_number or st.enrollment_number }}
+                        {% if st.section %} · Sec {{ st.section.name }}{% endif %}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="asg-r-status" id="rStatus-{{ a.id }}-{{ st.id }}">
+                    {% if is_sub %}
+                      <span class="badge-sub done">
+                        ✓ Submitted
+                        {% if sub and sub.submitted_at %}
+                          <small>{{ sub.submitted_at.strftime('%d %b') }}</small>
+                        {% endif %}
+                      </span>
+                    {% else %}
+                      <span class="badge-sub pending">⏳ Pending</span>
+                    {% endif %}
+                  </div>
+
+                  <div class="asg-r-actions">
+                    <div class="grade-feedback-box">
+                      <input type="text" class="asg-grade-in"
+                             placeholder="Grade / Marks"
+                             maxlength="10"
+                             value="{{ sub.grade if sub and sub.grade else '' }}"
+                             id="gradeIn-{{ a.id }}-{{ st.id }}"
+                             title="Enter grade or score (e.g. 10/10, A+)">
+                      <input type="text" class="asg-fb-in"
+                             placeholder="Teacher remarks (optional)"
+                             value="{{ sub.feedback if sub and sub.feedback else '' }}"
+                             id="fbIn-{{ a.id }}-{{ st.id }}"
+                             title="Enter feedback for student">
+                    </div>
+
+                    <div class="asg-btn-actions" id="btnActions-{{ a.id }}-{{ st.id }}">
+                      {% if not is_sub %}
+                        <button type="button" class="asg-btn sm primary btn-mark-sub"
+                                onclick="markStudent({{ a.id }}, {{ st.id }}, 'mark')"
+                                title="Mark as submitted offline">
+                          ✓ Mark
+                        </button>
+                      {% else %}
+                        <button type="button" class="asg-btn sm btn-save-grade"
+                                onclick="markStudent({{ a.id }}, {{ st.id }}, 'grade')"
+                                title="Save grade and remarks">
+                          Save
+                        </button>
+                        <button type="button" class="asg-btn sm ghost danger btn-unmark"
+                                onclick="markStudent({{ a.id }}, {{ st.id }}, 'unmark')"
+                                title="Unmark offline submission">
+                          ✕
+                        </button>
+                      {% endif %}
+                    </div>
+                  </div>
+
+                </div>
+              {% else %}
+                <div class="asg-roster-empty">No students found matching this assignment target.</div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="asg-empty">
+    <div class="empty-illust">📝</div>
+    <h3>No assignments yet</h3>
+    <p>
+      {% if mode == 'teacher' %}
+        Create an assignment with instructions or attached question papers to get started.
+      {% else %}
+        No assignments pending for your class right now.
+      {% endif %}
+    </p>
+    {% if mode == 'teacher' %}
+      <button class="btn" onclick="openModal('assignModal')">+ Create Assignment</button>
+    {% endif %}
+  </div>
+{% endif %}
+
+{# ============================================================
+   Create Assignment modal (teacher)
+   ============================================================ #}
+{% if mode == 'teacher' %}
+<div class="modal-back" id="assignModal">
+  <form class="modal" method="post" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="modal-head">
+      <h2>Create Assignment</h2>
+      <button type="button" class="btn ghost sm" onclick="closeModal('assignModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label>Assignment Title *</label>
+        <input type="text" name="title" required placeholder="e.g. Unit 3 Lab Exercises &amp; Questions">
+      </div>
+
+      <div class="form-row">
+        <label>Description &amp; Instructions</label>
+        <textarea name="description" placeholder="Write question details, instructions, required formats or questions…" rows="4"></textarea>
+      </div>
+
+      <div class="form-row">
+        <label>Submission Deadline / Due Date</label>
+        <input type="datetime-local" name="due_date">
+      </div>
+
+      <div class="form-row">
+        <label>Attach Question Paper / File (Optional)</label>
+        <div class="asg-file-upload-box">
+          <input type="file" id="assignAttachmentInput" name="attachment"
+                 accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.gif,.ppt,.pptx,.xls,.xlsx,.txt,.zip"
+                 onchange="onAssignFileSelect(this)">
+          <div class="upload-hint">
+            <span class="upload-icon">📎</span>
+            <span id="assignFilePrompt">Choose or drag a PDF, Word document, Image, or Worksheet</span>
+            <small style="color:var(--text-3);font-size:11px;display:block;margin-top:3px;">Supported: PDF, DOC, DOCX, Images, PPT, Excel, TXT, ZIP</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-bottom:0;">
+        <label style="margin-bottom:8px;">Target Class / Audience</label>
+        {% include "_targeting_fields.html" %}
+      </div>
+
+      <div class="asg-offline-notice">
+        🏫 <b>Offline Submissions:</b> Students will physically hand in their work to you in class. You can track, check off, and grade each student directly from your roster.
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn outline" onclick="closeModal('assignModal')">Cancel</button>
+      <button class="btn">Publish Assignment</button>
+    </div>
+  </form>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  // Initialize avatar colors
+  document.querySelectorAll('.avatar[data-color]').forEach(function (el) {
+    var c = el.getAttribute('data-color');
+    if (c) el.style.backgroundImage = c;
+  });
+})();
+
+// File attachment selection indicator in create modal
+function onAssignFileSelect(input) {
+  var promptEl = document.getElementById('assignFilePrompt');
+  if (!promptEl) return;
+  if (input.files && input.files.length > 0) {
+    var file = input.files[0];
+    var sizeStr = (file.size > 1048576) ? (file.size / 1048576).toFixed(1) + ' MB' : (file.size / 1024).toFixed(0) + ' KB';
+    promptEl.innerHTML = '<b>' + file.name + '</b> (' + sizeStr + ')';
+    promptEl.style.color = 'var(--accent)';
+  } else {
+    promptEl.textContent = 'Choose or drag a PDF, Word document, Image, or Worksheet';
+    promptEl.style.color = '';
+  }
+}
+
+// Toggle Tracker Drawer
+function toggleTracker(aid) {
+  var drawer = document.getElementById('trackerDrawer-' + aid);
+  var chevron = document.getElementById('chevron-' + aid);
+  if (!drawer) return;
+  var isHidden = drawer.style.display === 'none' || drawer.style.display === '';
+  drawer.style.display = isHidden ? 'block' : 'none';
+  if (chevron) {
+    chevron.textContent = isHidden ? '▴' : '▾';
+  }
+}
+
+// Live search inside roster
+function filterRoster(aid, text) {
+  var q = (text || '').toLowerCase().trim();
+  var rows = document.querySelectorAll('#rosterList-' + aid + ' .asg-roster-row');
+  rows.forEach(function (row) {
+    var name = row.getAttribute('data-name') || '';
+    var roll = row.getAttribute('data-roll') || '';
+    var status = row.getAttribute('data-status') || '';
+    var activeTab = document.querySelector('#trackerDrawer-' + aid + ' .tab-btn.active');
+    var tabFilter = activeTab ? activeTab.getAttribute('data-filter') : 'all';
+
+    var matchesSearch = (!q || name.indexOf(q) !== -1 || roll.indexOf(q) !== -1);
+    var matchesTab = (tabFilter === 'all' || status === tabFilter);
+
+    row.style.display = (matchesSearch && matchesTab) ? '' : 'none';
+  });
+}
+
+// Tab filtering: all / submitted / pending
+function filterTab(aid, filterType, btn) {
+  var tabs = document.querySelectorAll('#trackerDrawer-' + aid + ' .tab-btn');
+  tabs.forEach(function (t) { t.classList.remove('active'); });
+  btn.classList.add('active');
+
+  var searchIn = document.querySelector('#trackerDrawer-' + aid + ' .asg-search-input');
+  var q = searchIn ? searchIn.value.toLowerCase().trim() : '';
+
+  var rows = document.querySelectorAll('#rosterList-' + aid + ' .asg-roster-row');
+  rows.forEach(function (row) {
+    var name = row.getAttribute('data-name') || '';
+    var roll = row.getAttribute('data-roll') || '';
+    var status = row.getAttribute('data-status') || '';
+
+    var matchesSearch = (!q || name.indexOf(q) !== -1 || roll.indexOf(q) !== -1);
+    var matchesTab = (filterType === 'all' || status === filterType);
+
+    row.style.display = (matchesSearch && matchesTab) ? '' : 'none';
+  });
+}
+
+// AJAX mark / unmark / grade student submission
+function markStudent(aid, studentId, action) {
+  var csrf = document.querySelector('meta[name="csrf-token"]') ?
+             document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '';
+
+  var gradeInput = document.getElementById('gradeIn-' + aid + '-' + studentId);
+  var fbInput = document.getElementById('fbIn-' + aid + '-' + studentId);
+
+  var grade = gradeInput ? gradeInput.value.trim() : '';
+  var feedback = fbInput ? fbInput.value.trim() : '';
+
+  var postData = new FormData();
+  postData.append('student_id', studentId);
+  postData.append('action', action);
+  postData.append('grade', grade);
+  postData.append('feedback', feedback);
+  if (csrf) postData.append('csrf_token', csrf);
+
+  var btnContainer = document.getElementById('btnActions-' + aid + '-' + studentId);
+  if (btnContainer) btnContainer.style.opacity = '0.5';
+
+  fetch('/teacher/assignments/' + aid + '/mark-student', {
+    method: 'POST',
+    body: postData,
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest'
+    }
+  })
+  .then(function (r) { return r.json(); })
+  .then(function (data) {
+    if (btnContainer) btnContainer.style.opacity = '1';
+    if (!data.ok) {
+      alert('Error updating submission: ' + (data.error || 'Failed'));
+      return;
+    }
+
+    var row = document.getElementById('rosterRow-' + aid + '-' + studentId);
+    var statusContainer = document.getElementById('rStatus-' + aid + '-' + studentId);
+
+    if (action === 'unmark' || data.action === 'unmarked') {
+      // Transition to pending
+      if (row) {
+        row.classList.remove('is-submitted');
+        row.classList.add('is-pending');
+        row.setAttribute('data-status', 'pending');
+      }
+      if (statusContainer) {
+        statusContainer.innerHTML = '<span class="badge-sub pending">⏳ Pending</span>';
+      }
+      if (btnContainer) {
+        btnContainer.innerHTML = '<button type="button" class="asg-btn sm primary btn-mark-sub" onclick="markStudent(' + aid + ', ' + studentId + ', \'mark\')">✓ Mark</button>';
+      }
+    } else {
+      // Transition to marked / submitted
+      if (row) {
+        row.classList.add('is-submitted');
+        row.classList.remove('is-pending');
+        row.setAttribute('data-status', 'submitted');
+      }
+      if (statusContainer) {
+        statusContainer.innerHTML = '<span class="badge-sub done">✓ Submitted <small>Just now</small></span>';
+      }
+      if (btnContainer) {
+        btnContainer.innerHTML = '<button type="button" class="asg-btn sm btn-save-grade" onclick="markStudent(' + aid + ', ' + studentId + ', \'grade\')" title="Save grade">Save</button> ' +
+                                 '<button type="button" class="asg-btn sm ghost danger btn-unmark" onclick="markStudent(' + aid + ', ' + studentId + ', \'unmark\')" title="Unmark">✕</button>';
+      }
+    }
+
+    // Recalculate statistics for this assignment card
+    recalcTrackerStats(aid);
+  })
+  .catch(function (err) {
+    if (btnContainer) btnContainer.style.opacity = '1';
+    console.error(err);
+    alert('Network error. Please try again.');
+  });
+}
+
+function recalcTrackerStats(aid) {
+  var roster = document.querySelectorAll('#rosterList-' + aid + ' .asg-roster-row');
+  var total = roster.length;
+  var submitted = document.querySelectorAll('#rosterList-' + aid + ' .asg-roster-row.is-submitted').length;
+  var pending = Math.max(0, total - submitted);
+  var pct = total > 0 ? Math.round((submitted / total) * 100) : 0;
+
+  var tsCount = document.getElementById('tsSubCount-' + aid);
+  if (tsCount) tsCount.textContent = submitted;
+
+  var tsPct = document.getElementById('tsPct-' + aid);
+  if (tsPct) tsPct.textContent = pct + '%';
+
+  var fill = document.getElementById('tsProgressFill-' + aid);
+  if (fill) fill.style.width = pct + '%';
+
+  var btnCount = document.getElementById('btnCountPill-' + aid);
+  if (btnCount) btnCount.textContent = submitted + '/' + total;
+
+  var tabSub = document.getElementById('tabSubCount-' + aid);
+  if (tabSub) tabSub.textContent = submitted;
+
+  var tabPend = document.getElementById('tabPendCount-' + aid);
+  if (tabPend) tabPend.textContent = pending;
+}
+</script>
+{% endblock %}
