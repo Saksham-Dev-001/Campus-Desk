@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% block title %}Audit Log — CampusDesk{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/audit.css') }}?v=1">
+
+<svg width="0" height="0" style="position:absolute;" aria-hidden="true">
+  <defs>
+    <symbol id="ad-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </symbol>
+    <symbol id="ad-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </symbol>
+    <symbol id="ad-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="3 6 5 6 21 6"/>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+    </symbol>
+    <symbol id="ad-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/>
+    </symbol>
+    <symbol id="ad-archive" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="21 8 21 21 3 21 3 8"/>
+      <rect x="1" y="3" width="22" height="5"/>
+      <line x1="10" y1="12" x2="14" y2="12"/>
+    </symbol>
+    <symbol id="ad-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+    </symbol>
+    <symbol id="ad-login" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+      <polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
+    </symbol>
+    <symbol id="ad-sparkle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 2l2.09 6.26L20 10l-5.91 1.74L12 18l-2.09-6.26L4 10l5.91-1.74z"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="page-head">
+  <div>
+    <h1>📋 Audit Log</h1>
+    <div class="sub">
+      {% if total %}
+        Showing <b>{{ logs|length }}</b> of <b>{{ total }}</b> total events
+      {% else %}
+        System activity feed
+      {% endif %}
+    </div>
+  </div>
+  <div class="actions">
+    <a href="{{ url_for('admin.audit') }}" class="btn outline">🔄 Refresh</a>
+  </div>
+</div>
+
+<div class="audit-stats">
+  <div class="audit-stat">
+    <div class="label"><span class="dot"></span>Total Events</div>
+    <div class="value">{{ total }}</div>
+  </div>
+  <div class="audit-stat green">
+    <div class="label"><span class="dot"></span>Today</div>
+    <div class="value">{{ today_count }}</div>
+  </div>
+  <div class="audit-stat amber">
+    <div class="label"><span class="dot"></span>Active Users</div>
+    <div class="value">{{ unique_users }}</div>
+  </div>
+  <div class="audit-stat red">
+    <div class="label"><span class="dot"></span>Deletions</div>
+    <div class="value">{{ delete_count }}</div>
+  </div>
+</div>
+
+<form method="get" class="audit-filters">
+  <div class="audit-filter search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <input type="text" name="q" placeholder="Search details, entity, user..." value="{{ filters.q or '' }}">
+  </div>
+
+  <div class="audit-filter">
+    <select name="action">
+      <option value="">All actions</option>
+      {% for a in action_options %}
+        <option value="{{ a }}" {% if filters.action == a %}selected{% endif %}>{{ a }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="audit-filter">
+    <select name="user_id">
+      <option value="">All users</option>
+      {% for u in user_options %}
+        <option value="{{ u.id }}" {% if filters.user_id == u.id|string %}selected{% endif %}>
+          {{ u.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="audit-actions">
+    <button type="submit" class="btn">Apply</button>
+    {% if filters.q or filters.action or filters.user_id %}
+      <a href="{{ url_for('admin.audit') }}" class="btn outline">Clear</a>
+    {% endif %}
+  </div>
+</form>
+
+{% if logs %}
+  {% for day, items in grouped.items() %}
+    <div class="audit-day">
+      <div class="audit-day-head">
+        <h3>{{ day }}</h3>
+        <span class="count">{{ items|length }}</span>
+      </div>
+
+      {% for l in items %}
+        {% set action = l.action or '' %}
+        {% if 'delete' in action %}
+          {% set cat = 'delete' %}
+          {% set ico = 'ad-trash' %}
+        {% elif 'create' in action %}
+          {% set cat = 'create' %}
+          {% set ico = 'ad-plus' %}
+        {% elif 'update' in action or 'rename' in action or 'grade' in action %}
+          {% set cat = 'update' %}
+          {% set ico = 'ad-edit' %}
+        {% elif 'archive' in action %}
+          {% set cat = 'archive' %}
+          {% set ico = 'ad-archive' %}
+        {% elif 'import' in action or 'bulk' in action or 'csv' in action %}
+          {% set cat = 'import' %}
+          {% set ico = 'ad-upload' %}
+        {% elif 'login' in action or 'logout' in action or 'auth' in action %}
+          {% set cat = 'auth' %}
+          {% set ico = 'ad-login' %}
+        {% else %}
+          {% set cat = '' %}
+          {% set ico = 'ad-sparkle' %}
+        {% endif %}
+
+        <div class="audit-item action-{{ cat }}">
+          <div class="audit-icon">
+            <svg><use href="#{{ ico }}"/></svg>
+          </div>
+
+          <div class="audit-body">
+            <div class="audit-line1">
+              {% if l.user %}
+                <span class="audit-user">
+                  <span class="audit-avatar" data-color="{{ l.user.avatar_color }}">
+                    {{ l.user.initials }}
+                  </span>
+                  <b>{{ l.user.name }}</b>
+                </span>
+              {% else %}
+                <span class="audit-user system"><b>System</b></span>
+              {% endif %}
+
+              <span class="audit-badge">{{ action }}</span>
+            </div>
+
+            {% if l.details %}
+              <div class="audit-desc">{{ l.details }}</div>
+            {% endif %}
+
+            {% if l.entity %}
+              <span class="audit-entity">
+                {{ l.entity }}{% if l.entity_id %} #{{ l.entity_id }}{% endif %}
+              </span>
+            {% endif %}
+          </div>
+
+          <div class="audit-time">{{ l.created_at.strftime('%H:%M') }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endfor %}
+
+  {% if total > logs|length %}
+    <div style="text-align:center;padding:20px;color:var(--text-3);font-size:13px;">
+      Showing most recent {{ logs|length }} events · use filters to narrow down
+    </div>
+  {% endif %}
+
+{% else %}
+  <div class="audit-empty">
+    <div class="big-icon">📋</div>
+    <h3>No matching events</h3>
+    <p>
+      {% if filters.q or filters.action or filters.user_id %}
+        No log entries match your filters. Try clearing them.
+      {% else %}
+        System activity will appear here as users interact with CampusDesk.
+      {% endif %}
+    </p>
+    {% if filters.q or filters.action or filters.user_id %}
+      <a href="{{ url_for('admin.audit') }}" class="btn" style="margin-top:16px;">Clear filters</a>
+    {% endif %}
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  document.querySelectorAll('.audit-avatar[data-color]').forEach(function (el) {
+    var c = el.getAttribute('data-color');
+    if (c) el.style.background = c;
+  });
+})();
+</script>
+{% endblock %}
