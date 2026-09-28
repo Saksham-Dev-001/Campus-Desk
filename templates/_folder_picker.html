@@ -1,0 +1,673 @@
+{# ================================================================
+   Windows-Explorer-style folder picker modal
+   Include this once per page that needs folder selection.
+   Then call: openFolderPicker({ onSelect: fn, currentId: '123' })
+   ================================================================ #}
+
+<style>
+/* ---------- Folder picker modal ---------- */
+.fp-back {
+  position: fixed; inset: 0;
+  background: rgba(6, 10, 20, .7);
+  backdrop-filter: blur(6px);
+  z-index: 300;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fp-fade .18s ease;
+}
+.fp-back.show { display: flex; }
+@keyframes fp-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.fp-shell {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 720px;
+  height: 80vh;
+  max-height: 620px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 30px 80px rgba(0,0,0,.5);
+  animation: fp-pop .24s cubic-bezier(.16,1,.3,1);
+}
+@keyframes fp-pop {
+  from { opacity: 0; transform: translateY(12px) scale(.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ---------- Header ---------- */
+.fp-head {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.fp-head-icon {
+  width: 34px; height: 34px;
+  border-radius: 9px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: grid; place-items: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.fp-head-text { flex: 1; min-width: 0; }
+.fp-head-text h2 {
+  margin: 0 0 2px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -.2px;
+}
+.fp-head-text p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.fp-close {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  cursor: pointer;
+  display: grid; place-items: center;
+  font-size: 15px;
+  flex-shrink: 0;
+  transition: all .14s;
+}
+.fp-close:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: rgba(225,29,72,.3);
+}
+
+/* ---------- Toolbar (breadcrumb + back + search) ---------- */
+.fp-toolbar {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.fp-nav-btn {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  flex-shrink: 0;
+  transition: all .14s;
+}
+.fp-nav-btn:hover:not(:disabled) {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.fp-nav-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+.fp-crumbs {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 5px 10px;
+  font-size: 12.5px;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+  height: 32px;
+}
+.fp-crumbs::-webkit-scrollbar { display: none; }
+.fp-crumbs button {
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.fp-crumbs button:hover { background: var(--accent-soft); }
+.fp-crumbs button.current {
+  color: var(--text);
+  font-weight: 700;
+  cursor: default;
+}
+.fp-crumbs .sep {
+  color: var(--text-3);
+  font-size: 11px;
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+
+.fp-search-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.fp-search-wrap input {
+  width: 180px;
+  padding: 7px 10px 7px 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 12.5px;
+  font-family: inherit;
+  color: var(--text);
+  outline: none;
+  transition: all .14s;
+}
+.fp-search-wrap input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  width: 200px;
+}
+.fp-search-wrap svg {
+  position: absolute;
+  left: 9px; top: 50%;
+  transform: translateY(-50%);
+  width: 13px; height: 13px;
+  color: var(--text-3);
+  pointer-events: none;
+}
+
+/* ---------- Folder list ---------- */
+.fp-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  background: var(--surface);
+}
+.fp-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background .12s;
+  border: 1px solid transparent;
+  user-select: none;
+  min-width: 0;
+}
+.fp-row:hover {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+.fp-row.selected {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.fp-row.selected .fp-row-name { color: var(--accent); font-weight: 700; }
+
+.fp-row-icon {
+  width: 36px; height: 36px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, rgba(217,119,6,.15), rgba(245,158,11,.1));
+  color: #d97706;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.fp-row-info { flex: 1; min-width: 0; }
+.fp-row-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+.fp-row-meta {
+  font-size: 11px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fp-row-arrow {
+  color: var(--text-3);
+  font-size: 16px;
+  flex-shrink: 0;
+  padding-left: 4px;
+}
+
+.fp-empty {
+  text-align: center;
+  padding: 60px 24px;
+  color: var(--text-3);
+}
+.fp-empty-icon {
+  font-size: 48px;
+  opacity: .3;
+  margin-bottom: 12px;
+}
+.fp-empty h3 {
+  font-size: 15px;
+  color: var(--text-2);
+  margin-bottom: 4px;
+}
+.fp-empty p { font-size: 12.5px; margin: 0; }
+
+/* ---------- Footer ---------- */
+.fp-foot {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.fp-foot-info {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.fp-foot-info .target {
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fp-foot-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Mobile */
+@media (max-width: 700px) {
+  .fp-back { padding: 0; align-items: flex-end; }
+  .fp-shell {
+    max-width: 100%;
+    height: 92vh;
+    max-height: 92vh;
+    border-radius: 20px 20px 0 0;
+    animation: fp-slide .26s cubic-bezier(.16,1,.3,1);
+  }
+  @keyframes fp-slide {
+    from { opacity: 0; transform: translateY(100%); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .fp-search-wrap { display: none; }
+  .fp-toolbar { padding: 8px 10px; }
+}
+</style>
+
+{# ---------- HTML ---------- #}
+<div class="fp-back" id="folderPickerBack">
+  <div class="fp-shell" onclick="event.stopPropagation()">
+
+    {# Header #}
+    <div class="fp-head">
+      <div class="fp-head-icon">📁</div>
+      <div class="fp-head-text">
+        <h2 id="fpTitle">Choose folder</h2>
+        <p>Kis folder mein save karna hai?</p>
+      </div>
+      <button type="button" class="fp-close" onclick="closeFolderPicker()" aria-label="Close">✕</button>
+    </div>
+
+    {# Toolbar: back + breadcrumbs + search #}
+    <div class="fp-toolbar">
+      <button type="button" class="fp-nav-btn" id="fpBackBtn" onclick="fpGoBack()" title="Back">←</button>
+      <div class="fp-crumbs" id="fpCrumbs"></div>
+      <div class="fp-search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="fpSearch" placeholder="Search all…" oninput="fpDoSearch(this.value)">
+      </div>
+    </div>
+
+    {# Body #}
+    <div class="fp-body" id="fpBody"></div>
+
+    {# Footer #}
+    <div class="fp-foot">
+      <div class="fp-foot-info">
+        <span>Selected:</span>
+        <span class="target" id="fpSelectedName">Root</span>
+      </div>
+      <div class="fp-foot-actions">
+        <button type="button" class="btn outline" onclick="closeFolderPicker()">Cancel</button>
+        <button type="button" class="btn" id="fpConfirmBtn" onclick="fpConfirm()">Select this folder</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   Windows-Explorer-style folder picker
+   ===================================================================== */
+(function () {
+  'use strict';
+
+  var FP = {
+    tree: null,             // {id, name, parent_id, children}
+    byId: {},               // flat map for fast lookup
+    currentId: null,        // currently browsing
+    selectedId: null,       // selected (defaults to currentId)
+    history: [],            // navigation stack
+    onSelect: null,         // callback after confirm
+    searchActive: false,
+  };
+
+  /* ---- Public: open ---- */
+  window.openFolderPicker = async function (opts) {
+    opts = opts || {};
+    FP.onSelect = opts.onSelect || null;
+    FP.selectedId = opts.currentId != null ? String(opts.currentId) : '';
+    FP.currentId = FP.selectedId || null;
+    FP.history = [];
+
+    var back = document.getElementById('folderPickerBack');
+    if (!back) return;
+    back.classList.add('show');
+    document.body.style.overflow = 'hidden';
+
+    if (opts.title) {
+      var t = document.getElementById('fpTitle');
+      if (t) t.textContent = opts.title;
+    }
+
+    if (!FP.tree) {
+      setBody('<div class="fp-empty"><div class="fp-empty-icon">⏳</div><h3>Loading…</h3></div>');
+      try {
+        var r = await fetch('/api/folders/tree', { credentials: 'same-origin' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        var data = await r.json();
+        FP.tree = data.tree || [];
+        indexTree(FP.tree, null);
+      } catch (e) {
+        setBody('<div class="fp-empty"><div class="fp-empty-icon">⚠️</div><h3>Could not load folders</h3><p>' + e.message + '</p></div>');
+        return;
+      }
+    }
+
+    render();
+    var s = document.getElementById('fpSearch');
+    if (s) s.value = '';
+  };
+
+  window.closeFolderPicker = function () {
+    var back = document.getElementById('folderPickerBack');
+    if (!back) return;
+    back.classList.remove('show');
+    document.body.style.overflow = '';
+  };
+
+  /* ---- Build flat index for fast lookup ---- */
+  function indexTree(nodes, parent) {
+    nodes.forEach(function (n) {
+      n.parent_id = parent ? parent.id : null;
+      FP.byId[n.id] = n;
+      if (n.children && n.children.length) indexTree(n.children, n);
+    });
+  }
+
+  function findNode(id) {
+    return FP.byId[String(id)] || null;
+  }
+
+  function childrenOf(id) {
+    if (id == null) return FP.tree || [];
+    var n = findNode(id);
+    return n ? (n.children || []) : [];
+  }
+
+  /* ---- Render current folder contents ---- */
+  function render() {
+    var body = document.getElementById('fpBody');
+    if (!body) return;
+
+    renderCrumbs();
+    var kids = childrenOf(FP.currentId);
+
+    if (!kids.length) {
+      var name = FP.currentId ? findNode(FP.currentId).name : 'Root';
+      body.innerHTML =
+        '<div class="fp-empty">' +
+          '<div class="fp-empty-icon">📂</div>' +
+          '<h3>No sub-folders here</h3>' +
+          '<p>You can still select this folder</p>' +
+        '</div>';
+    } else {
+      body.innerHTML = '';
+      kids.forEach(function (n) {
+        var row = document.createElement('div');
+        row.className = 'fp-row' + (String(n.id) === String(FP.selectedId) ? ' selected' : '');
+        row.dataset.id = n.id;
+        var childCount = (n.children || []).length;
+        row.innerHTML =
+          '<div class="fp-row-icon">📁</div>' +
+          '<div class="fp-row-info">' +
+            '<div class="fp-row-name">' + escapeHtml(n.name) + '</div>' +
+            '<div class="fp-row-meta">' + childCount + ' sub-folder' + (childCount === 1 ? '' : 's') + '</div>' +
+          '</div>' +
+          '<div class="fp-row-arrow">›</div>';
+
+        // Single click: select this folder
+        row.addEventListener('click', function () {
+          FP.selectedId = String(n.id);
+          updateSelectionUI();
+        });
+        // Double click: navigate INTO folder
+        row.addEventListener('dblclick', function () {
+          fpEnter(n.id);
+        });
+        body.appendChild(row);
+      });
+    }
+    updateSelectionUI();
+  }
+
+  /* ---- Breadcrumbs ---- */
+  function renderCrumbs() {
+    var c = document.getElementById('fpCrumbs');
+    if (!c) return;
+    c.innerHTML = '';
+
+    var chain = [];
+    var cur = FP.currentId ? findNode(FP.currentId) : null;
+    while (cur) {
+      chain.unshift(cur);
+      cur = cur.parent_id ? findNode(cur.parent_id) : null;
+    }
+
+    // Root button
+    var rootBtn = document.createElement('button');
+    rootBtn.type = 'button';
+    rootBtn.textContent = '🏠 Root';
+    if (!FP.currentId) {
+      rootBtn.classList.add('current');
+    } else {
+      rootBtn.onclick = function () { fpNavigateTo(null); };
+    }
+    c.appendChild(rootBtn);
+
+    chain.forEach(function (n) {
+      var sep = document.createElement('span');
+      sep.className = 'sep';
+      sep.textContent = '›';
+      c.appendChild(sep);
+
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = n.name;
+      if (String(n.id) === String(FP.currentId)) {
+        btn.classList.add('current');
+      } else {
+        btn.onclick = function () { fpNavigateTo(n.id); };
+      }
+      c.appendChild(btn);
+    });
+
+    // Scroll to end
+    setTimeout(function () { c.scrollLeft = c.scrollWidth; }, 0);
+  }
+
+  /* ---- Navigation ---- */
+  function fpNavigateTo(id) {
+    FP.history.push(FP.currentId);
+    FP.currentId = id != null ? String(id) : null;
+    // Auto-select the folder we navigate into (Windows style: browsing = candidate)
+    FP.selectedId = FP.currentId;
+    render();
+  }
+
+  window.fpEnter = function (id) { fpNavigateTo(id); };
+
+  window.fpGoBack = function () {
+    if (!FP.history.length) return;
+    var prev = FP.history.pop();
+    FP.currentId = prev;
+    FP.selectedId = prev;
+    render();
+  };
+
+  /* ---- Selection UI (footer + row highlight) ---- */
+  function updateSelectionUI() {
+    document.querySelectorAll('.fp-row').forEach(function (r) {
+      r.classList.toggle('selected', r.dataset.id === String(FP.selectedId));
+    });
+    var back = document.getElementById('fpBackBtn');
+    if (back) back.disabled = FP.history.length === 0;
+
+    var nameEl = document.getElementById('fpSelectedName');
+    if (!nameEl) return;
+    if (!FP.selectedId) {
+      nameEl.textContent = 'Root';
+    } else {
+      var n = findNode(FP.selectedId);
+      nameEl.textContent = n ? buildPath(n) : 'Unknown';
+    }
+  }
+
+  function buildPath(n) {
+    var parts = [n.name];
+    var cur = n;
+    while (cur.parent_id && (cur = findNode(cur.parent_id))) {
+      parts.unshift(cur.name);
+    }
+    return parts.join(' / ');
+  }
+
+  /* ---- Confirm ---- */
+  window.fpConfirm = function () {
+    var id = FP.selectedId || '';
+    var label = id ? (findNode(id) ? buildPath(findNode(id)) : '') : 'Root';
+    if (typeof FP.onSelect === 'function') {
+      FP.onSelect(id, label, FP.selectedId ? findNode(FP.selectedId) : null);
+    }
+    closeFolderPicker();
+  };
+
+  /* ---- Search (flat list of all folders) ---- */
+  window.fpDoSearch = function (q) {
+    q = (q || '').trim().toLowerCase();
+    var body = document.getElementById('fpBody');
+    if (!body) return;
+
+    if (!q) {
+      FP.searchActive = false;
+      render();
+      return;
+    }
+    FP.searchActive = true;
+
+    var hits = [];
+    Object.keys(FP.byId).forEach(function (id) {
+      var n = FP.byId[id];
+      var path = buildPath(n).toLowerCase();
+      if (path.indexOf(q) !== -1) hits.push(n);
+    });
+
+    if (!hits.length) {
+      body.innerHTML = '<div class="fp-empty"><div class="fp-empty-icon">🔍</div><h3>No match</h3><p>Try a different keyword</p></div>';
+      return;
+    }
+
+    body.innerHTML = '';
+    hits.slice(0, 50).forEach(function (n) {
+      var row = document.createElement('div');
+      row.className = 'fp-row' + (String(n.id) === String(FP.selectedId) ? ' selected' : '');
+      row.dataset.id = n.id;
+      row.innerHTML =
+        '<div class="fp-row-icon">📁</div>' +
+        '<div class="fp-row-info">' +
+          '<div class="fp-row-name">' + escapeHtml(n.name) + '</div>' +
+          '<div class="fp-row-meta">' + escapeHtml(buildPath(n)) + '</div>' +
+        '</div>';
+      row.addEventListener('click', function () {
+        FP.selectedId = String(n.id);
+        updateSelectionUI();
+      });
+      row.addEventListener('dblclick', function () {
+        FP.selectedId = String(n.id);
+        FP.currentId = String(n.id);
+        FP.history.push(null);
+        FP.searchActive = false;
+        var s = document.getElementById('fpSearch');
+        if (s) s.value = '';
+        render();
+      });
+      body.appendChild(row);
+    });
+    updateSelectionUI();
+  };
+
+  /* ---- Helpers ---- */
+  function setBody(html) {
+    var b = document.getElementById('fpBody');
+    if (b) b.innerHTML = html;
+  }
+
+  function escapeHtml(s) {
+    return String(s || '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  /* ---- Backdrop / Esc close ---- */
+  document.addEventListener('click', function (e) {
+    if (e.target && e.target.id === 'folderPickerBack') closeFolderPicker();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      var back = document.getElementById('folderPickerBack');
+      if (back && back.classList.contains('show')) closeFolderPicker();
+    }
+  });
+})();
+</script>
