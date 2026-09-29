@@ -5,8 +5,10 @@ from flask import (Blueprint, render_template, request, redirect, url_for,
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
+from sqlalchemy import or_
 from models import (db, Student, Notice, Assignment, FileRecord, TimetableEntry,
-                    Notification, StudentRequest, AssignmentSubmission, AuditLog)
+                    Notification, StudentRequest, AssignmentSubmission, AuditLog,
+                    Subject, Teacher)
 from services.targeting import apply_target_filter
 from services.storage import get_storage_provider
 from extensions import cache
@@ -75,6 +77,20 @@ def notices():
         .order_by(Notice.publish_date.desc()).all()
     return render_template("notices.html", notices=items, mode="student")
 
+def _subject_icon(name):
+    n = (name or "").lower()
+    if "chem" in n: return "🧪"
+    if "math" in n: return "📐"
+    if "comm" in n or "eng" in n: return "🗣️"
+    if "program" in n or "python" in n or "c++" in n or "code" in n or "java" in n or "problem" in n: return "💻"
+    if "electr" in n or "circuit" in n or "digital" in n: return "⚡"
+    if "cyber" in n or "hack" in n or "secur" in n: return "🛡️"
+    if "phys" in n: return "⚛️"
+    if "mechan" in n or "civil" in n: return "⚙️"
+    if "ai" in n or "data" in n or "ml" in n: return "🤖"
+    if "lab" in n: return "🔬"
+    return "📘"
+
 @student_bp.route("/assignments")
 @login_required
 def assignments():
@@ -83,9 +99,91 @@ def assignments():
     s = _me()
     items = apply_target_filter(Assignment.query, Assignment, s) \
         .order_by(Assignment.due_date.asc().nullslast()).all()
-    return render_template("assignments.html", assignments=items,
-                           submissions={a.id: a.submission_for(s) for a in items},
-                           mode="student")
+    
+    subs = {a.id: a.submission_for(s) for a in items}
+
+    # Fetch all academic subjects for student's branch & semester
+    sub_q = Subject.query.filter(
+        or_(Subject.branch_id.is_(None), Subject.branch_id == s.branch_id),
+        or_(Subject.semester_id.is_(None), Subject.semester_id == s.semester_id)
+    )
+    # Exclude non-academic periods like Library and ECA
+    academic_subjects = [
+        sub for sub in sub_q.order_by(Subject.name).all()
+        if not (sub.code and (sub.code.startswith("LIB") or sub.code.startswith("ECA")))
+    ]
+
+    # Map each subject to its faculty from TimetableEntry
+    subject_teacher_map = {}
+    for sub in academic_subjects:
+        tt = TimetableEntry.query.filter_by(
+            branch_id=s.branch_id, 
+            section_id=s.section_id, 
+            subject_id=sub.id
+        ).first()
+        if tt and tt.teacher and tt.teacher.user:
+            subject_teacher_map[sub.id] = tt.teacher.user.name
+        else:
+            subject_teacher_map[sub.id] = "Faculty"
+
+    # Organize assignments by subject
+    subject_map = {sub.id: sub for sub in academic_subjects}
+    by_subject = {sub.id: [] for sub in academic_subjects}
+    general_assignments = []
+
+    for a in items:
+        if a.subject_id and a.subject_id in by_subject:
+            by_subject[a.subject_id].append(a)
+        elif a.subject_id and a.subject_id in subject_map:
+            by_subject[a.subject_id].append(a)
+        elif a.subject_id:
+            sub_obj = db.session.get(Subject, a.subject_id)
+            if sub_obj:
+                subject_map[sub_obj.id] = sub_obj
+                by_subject[sub_obj.id] = [a]
+                subject_teacher_map[sub_obj.id] = a.author.name if a.author else "Faculty"
+            else:
+                general_assignments.append(a)
+        else:
+            general_assignments.append(a)
+
+    subject_wise_list = []
+    for sub_id, sub in subject_map.items():
+        asgs = by_subject.get(sub_id, [])
+        sub_count = sum(1 for a in asgs if subs.get(a.id) is not None)
+        pend_count = sum(1 for a in asgs if subs.get(a.id) is None and a.status == "open")
+        subject_wise_list.append({
+            "id": sub.id,
+            "name": sub.name,
+            "code": sub.code or "",
+            "icon": _subject_icon(sub.name),
+            "teacher": subject_teacher_map.get(sub_id, "Faculty"),
+            "assignments": asgs,
+            "total_count": len(asgs),
+            "submitted_count": sub_count,
+            "pending_count": pend_count,
+        })
+
+    # Sort: subjects with assignments first, then alphabetically
+    subject_wise_list.sort(key=lambda x: (-x["total_count"], x["name"]))
+
+    # Overall stats for student
+    total_asgs = len(items)
+    total_submitted = sum(1 for a in items if subs.get(a.id) is not None)
+    total_pending = sum(1 for a in items if subs.get(a.id) is None and a.status == "open")
+
+    return render_template(
+        "assignments.html",
+        assignments=items,
+        submissions=subs,
+        subject_wise=subject_wise_list,
+        general_assignments=general_assignments,
+        total_asgs=total_asgs,
+        total_submitted=total_submitted,
+        total_pending=total_pending,
+        student=s,
+        mode="student"
+    )
 
 @student_bp.route("/assignments/<int:aid>/submit", methods=["POST"])
 @login_required
