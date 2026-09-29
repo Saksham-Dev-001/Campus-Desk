@@ -200,23 +200,117 @@
 
 /* ---------------------------------------------------------------------
    File preview — uses /api/files/<id>/preview (registered route)
-   Also detects when the iframe got a non-PDF (404 error page) and
-   shows a friendly fallback instead of embedding the whole dashboard.
+   Includes Smart Board presentation full-screen mode & smooth animations
    --------------------------------------------------------------------- */
 (function () {
   'use strict';
 
+  function updateSmartBoardUI(active) {
+    var btn = document.getElementById('btnSmartBoard');
+    var label = document.getElementById('smartBoardLabel');
+    var exp = btn ? btn.querySelector('.icon-expand') : null;
+    var comp = btn ? btn.querySelector('.icon-compress') : null;
+    if (!btn) return;
+
+    if (active) {
+      btn.classList.add('active');
+      if (label) label.textContent = 'Exit Smart Board';
+      if (exp) exp.style.display = 'none';
+      if (comp) comp.style.display = 'inline-block';
+    } else {
+      btn.classList.remove('active');
+      if (label) label.textContent = 'Full Screen (Smart Board)';
+      if (exp) exp.style.display = 'inline-block';
+      if (comp) comp.style.display = 'none';
+    }
+  }
+
+  window.toggleSmartBoardMode = function () {
+    var back = document.getElementById('previewBack');
+    var shell = document.getElementById('previewShell');
+    if (!back || !shell) return;
+
+    var isNowActive = !shell.classList.contains('is-smartboard');
+
+    if (isNowActive) {
+      shell.classList.add('is-smartboard');
+      back.classList.add('is-smartboard');
+      updateSmartBoardUI(true);
+
+      // Trigger HTML5 Fullscreen API on the document element for 100% smart board display
+      try {
+        var el = document.documentElement;
+        if (el.requestFullscreen) {
+          el.requestFullscreen().catch(function () {});
+        } else if (el.webkitRequestFullscreen) {
+          el.webkitRequestFullscreen();
+        } else if (el.msRequestFullscreen) {
+          el.msRequestFullscreen();
+        }
+      } catch (_) {}
+
+      if (window.showToast) {
+        window.showToast('🎯 Smart Board Teaching Mode enabled! Full screen ready.', 'info', 2500);
+      }
+    } else {
+      window.exitSmartBoardMode();
+    }
+  };
+
+  window.exitSmartBoardMode = function () {
+    var back = document.getElementById('previewBack');
+    var shell = document.getElementById('previewShell');
+    if (shell) shell.classList.remove('is-smartboard', 'is-fullscreen');
+    if (back) back.classList.remove('is-smartboard', 'is-fullscreen');
+    updateSmartBoardUI(false);
+
+    if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
+      try {
+        if (document.exitFullscreen) document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        else if (document.msExitFullscreen) document.msExitFullscreen();
+      } catch (_) {}
+    }
+  };
+
+  // Sync state if user exits full screen via hardware button or Esc
+  function handleFullscreenChange() {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+      var shell = document.getElementById('previewShell');
+      var back = document.getElementById('previewBack');
+      if (shell && shell.classList.contains('is-smartboard')) {
+        shell.classList.remove('is-smartboard', 'is-fullscreen');
+        if (back) back.classList.remove('is-smartboard', 'is-fullscreen');
+        updateSmartBoardUI(false);
+      }
+    }
+  }
+
+  document.addEventListener('fullscreenchange', handleFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+  document.addEventListener('msfullscreenchange', handleFullscreenChange);
+
   window.previewFile = function (fileId, filename, mimeType) {
     var back = document.getElementById('previewBack');
+    var shell = document.getElementById('previewShell');
     var title = document.getElementById('previewTitle');
     var sub = document.getElementById('previewSub');
     var body = document.getElementById('previewBody');
+    var dlBtn = document.getElementById('previewDownloadBtn');
     if (!back || !body) return;
 
     filename = filename || 'File';
     mimeType = mimeType || '';
-    title.textContent = filename;
-    sub.textContent = mimeType;
+    if (title) title.textContent = filename;
+    if (sub) sub.textContent = mimeType;
+
+    // Reset Smart Board state when opening a new preview
+    if (shell) shell.classList.remove('closing', 'is-smartboard', 'is-fullscreen');
+    back.classList.remove('closing', 'is-smartboard', 'is-fullscreen');
+    updateSmartBoardUI(false);
+
+    // Set download URL
+    if (dlBtn) dlBtn.href = '/files/' + fileId + '/download';
 
     back.classList.add('show');
     document.body.style.overflow = 'hidden';
@@ -251,14 +345,12 @@
       if (checked) return;
       checked = true;
       try {
-        // Same-origin: we can inspect the body.
         var doc = iframe.contentDocument || iframe.contentWindow.document;
         if (!doc) return;
         var hasSidebar = doc.querySelector('.sidebar, .topbar, .mobile-nav');
         var isError = doc.querySelector('.error-page, .empty h1');
         var looksLikeHtml = doc.body && doc.body.querySelector('html, body');
 
-        // If the loaded page contains app chrome, it's the error page.
         if (hasSidebar || (isError && looksLikeHtml)) {
           showFallback(iframe.parentNode, filename, fileId, mimeType,
                        'Preview unavailable — the file may not exist or you may not have access.');
@@ -280,23 +372,58 @@
         '<p>' + msg + '</p>' +
         '<div style="display:flex;gap:8px;justify-content:center;margin-top:18px;flex-wrap:wrap;">' +
           '<a class="btn" href="/files/' + fileId + '/download">⬇ Download file</a>' +
-          '<button type="button" class="btn outline" onclick="closePreview()">Close</button>' +
+          '<button type="button" class="btn outline" onclick="closePreviewWithAnim()">Close</button>' +
         '</div>' +
       '</div>';
   }
 
-  window.closePreview = function () {
+  /* Smooth exit animation with cleanup */
+  window.closePreviewWithAnim = function () {
     var back = document.getElementById('previewBack');
-    if (!back) return;
-    back.classList.remove('show');
-    var body = document.getElementById('previewBody');
-    if (body) body.innerHTML = '';
-    document.body.style.overflow = '';
+    var shell = document.getElementById('previewShell');
+    if (!back || !back.classList.contains('show')) return;
+
+    if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
+      try {
+        if (document.exitFullscreen) document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        else if (document.msExitFullscreen) document.msExitFullscreen();
+      } catch (_) {}
+    }
+
+    if (shell) shell.classList.add('closing');
+    back.classList.add('closing');
+
+    setTimeout(function () {
+      back.classList.remove('show', 'closing', 'is-smartboard', 'is-fullscreen');
+      if (shell) shell.classList.remove('closing', 'is-smartboard', 'is-fullscreen');
+      var body = document.getElementById('previewBody');
+      if (body) body.innerHTML = '';
+      document.body.style.overflow = '';
+      updateSmartBoardUI(false);
+    }, 180);
   };
+
+  // Backward compatibility alias
+  window.closePreview = window.closePreviewWithAnim;
 
   document.addEventListener('click', function (e) {
     if (e.target && e.target.id === 'previewBack') {
-      window.closePreview();
+      window.closePreviewWithAnim();
+    }
+  });
+
+  // Close preview on Esc key
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' || e.key === 'Esc') {
+      var back = document.getElementById('previewBack');
+      if (back && back.classList.contains('show')) {
+        if (document.fullscreenElement || document.webkitFullscreenElement) {
+          window.exitSmartBoardMode();
+        } else {
+          window.closePreviewWithAnim();
+        }
+      }
     }
   });
 })();
