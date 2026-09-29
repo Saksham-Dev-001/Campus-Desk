@@ -19,7 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=16">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/polish.css') }}?v=9">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/polish.css') }}?v=10">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/create-menu.css') }}?v=2">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ux-v3.css') }}?v=8">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/loader.css') }}?v=2">
@@ -455,12 +455,27 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
         <span>Header</span>
       </button>
+      <div class="pfd-sep"></div>
+      <button type="button" class="pfd-btn icon-only" onclick="toggleDockCollapse(true)" title="Minimize Controls (M)" aria-label="Minimize">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </button>
     </div>
+
+    <!-- Minimized Floating Pill Trigger for Zen View -->
+    <button type="button" class="preview-dock-trigger" id="previewDockTrigger" onclick="toggleDockCollapse(false)" style="display:none;" title="Click to show controls (M)">
+      <span class="pdt-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="1.5"></circle><circle cx="19" cy="12" r="1.5"></circle><circle cx="5" cy="12" r="1.5"></circle></svg>
+      </span>
+      <span class="pdt-badge" id="dockTriggerPage">1 / 1</span>
+      <span class="pdt-chevron">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="18 15 12 9 6 15"></polyline></svg>
+      </span>
+    </button>
   </div>
 </div>
 
 <script src="{{ url_for('static', filename='js/app.js') }}?v=7"></script>
-<script src="{{ url_for('static', filename='js/polish.js') }}?v=7"></script>
+<script src="{{ url_for('static', filename='js/polish.js') }}?v=8"></script>
 <script src="{{ url_for('static', filename='js/create-menu.js') }}?v=1"></script>
 <script src="{{ url_for('static', filename='js/dropzone.js') }}?v=2"></script>
 <script src="{{ url_for('static', filename='js/loader.js') }}?v=1"></script>
