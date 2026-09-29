@@ -2,7 +2,401 @@
 {% block title %}Assignments — CampusDesk{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/assignments.css') }}?v=3">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/assignments.css') }}?v=12">
+<style>
+/* =====================================================================
+   Enhanced Student Mobile Assignments UI
+   ===================================================================== */
+/* Bottom navigation clearance on mobile */
+@media (max-width: 768px) {
+  .content {
+    padding-bottom: 100px !important;
+  }
+}
+
+/* 1. Summary Metrics Grid */
+.asg-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.asg-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  transition: transform .14s, border-color .14s;
+}
+.asg-stat-card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+.asg-sc-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 17px;
+  flex-shrink: 0;
+  background: var(--surface-2);
+}
+.asg-sc-icon.blue { background: rgba(59,130,246,0.1); color: var(--accent); }
+.asg-sc-icon.purple { background: rgba(147,51,234,0.1); color: #9333ea; }
+.asg-sc-icon.amber { background: rgba(245,158,11,0.12); color: #d97706; }
+.asg-sc-icon.green { background: rgba(16,185,129,0.12); color: #059669; }
+.asg-sc-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.asg-sc-val {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.1;
+}
+.asg-stat-card.pending .asg-sc-val { color: #d97706; }
+.asg-stat-card.done .asg-sc-val { color: #059669; }
+.asg-sc-lbl {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-3);
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+/* 2. Unified Filter & Search Controls Card */
+.asg-controls-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px 16px 12px;
+  margin-bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+}
+.asg-search-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.asg-search-input-box {
+  flex: 1;
+  min-width: 220px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border: 1.5px solid var(--border-strong);
+  border-radius: 11px;
+  transition: all .15s ease;
+}
+.asg-search-input-box:focus-within {
+  border-color: var(--accent);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.asg-sib-icon {
+  font-size: 14px;
+  opacity: 0.75;
+  flex-shrink: 0;
+}
+.asg-main-search {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: 13.5px;
+  color: var(--text);
+  padding: 0;
+  width: 100%;
+}
+.asg-main-search::placeholder {
+  color: var(--text-3);
+}
+.asg-clear-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 13px;
+  line-height: 1;
+  border-radius: 4px;
+}
+.asg-clear-btn:hover {
+  color: var(--text);
+}
+
+/* Status Filter Segment */
+.asg-status-seg {
+  display: inline-flex;
+  align-items: center;
+  background: var(--surface-2);
+  padding: 3px;
+  border-radius: 11px;
+  border: 1px solid var(--border);
+  gap: 3px;
+  flex-shrink: 0;
+}
+.asg-seg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .14s ease;
+}
+.asg-seg-btn:hover {
+  color: var(--text);
+}
+.asg-seg-btn.active {
+  background: var(--surface);
+  color: var(--accent);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.asg-seg-btn .sf-cnt {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.05);
+}
+.asg-seg-btn.active .sf-cnt {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* Horizontal Subject Rail */
+.asg-sub-rail-wrap {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
+}
+.asg-sub-rail-wrap::-webkit-scrollbar {
+  display: none;
+}
+.asg-sub-rail {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: max-content;
+}
+.asg-rail-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all .15s ease;
+  user-select: none;
+}
+.asg-rail-pill:hover {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+.asg-rail-pill.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  box-shadow: 0 3px 10px rgba(43,92,255,0.25);
+}
+.asg-rail-pill.is-zero {
+  opacity: 0.72;
+}
+.asg-rail-pill.is-zero:hover {
+  opacity: 1;
+}
+.asg-rail-pill.active.is-zero {
+  opacity: 1;
+}
+.asg-rail-pill .pill-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  transition: all .15s ease;
+}
+.asg-rail-pill.active .pill-badge {
+  background: rgba(255,255,255,0.25);
+  color: #fff;
+}
+.asg-rail-pill .rail-pending-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245,158,11,0.25);
+}
+
+/* 3. All Caught Up Summary Card */
+.asg-all-caught-up-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1.5px dashed var(--border-strong);
+  border-radius: 14px;
+  margin-top: 18px;
+  transition: all .16s ease;
+}
+.asg-all-caught-up-card .acu-icon {
+  font-size: 26px;
+  flex-shrink: 0;
+}
+.asg-all-caught-up-card .acu-info {
+  flex: 1;
+  min-width: 0;
+}
+.asg-all-caught-up-card .acu-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+.asg-all-caught-up-card .acu-desc {
+  font-size: 12px;
+  color: var(--text-3);
+  margin: 2px 0 0;
+}
+
+/* 4. No Results Empty State */
+.asg-no-search-results {
+  padding: 36px 20px;
+  text-align: center;
+  background: var(--surface);
+  border: 1px dashed var(--border-strong);
+  border-radius: 16px;
+  margin: 20px 0;
+}
+.asg-no-search-results .nsr-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+  opacity: 0.8;
+}
+.asg-no-search-results h4 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 4px;
+}
+.asg-no-search-results p {
+  font-size: 13px;
+  color: var(--text-3);
+  margin: 0 0 14px;
+}
+
+/* Responsive Mobile Layout */
+@media (max-width: 680px) {
+  .asg-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .asg-stat-card {
+    padding: 10px 12px;
+    gap: 9px;
+    border-radius: 12px;
+  }
+  .asg-sc-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 15px;
+    border-radius: 8px;
+  }
+  .asg-sc-val {
+    font-size: 16px;
+  }
+  .asg-sc-lbl {
+    font-size: 11px;
+  }
+  .asg-controls-card {
+    padding: 12px;
+    gap: 10px;
+    border-radius: 14px;
+    margin-bottom: 16px;
+  }
+  .asg-search-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .asg-search-input-box {
+    width: 100%;
+    min-width: 0;
+    padding: 9px 12px;
+  }
+  .asg-main-search {
+    font-size: 16px;
+    touch-action: manipulation;
+  }
+  .asg-status-seg {
+    width: 100%;
+    display: flex;
+  }
+  .asg-seg-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 7px 4px;
+    font-size: 11.5px;
+  }
+  .asg-view-toggle-box {
+    display: none;
+  }
+  .asg-rail-pill {
+    padding: 6px 11px;
+    font-size: 12px;
+    gap: 5px;
+  }
+  .asg-all-caught-up-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+  .asg-all-caught-up-card button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+</style>
 
 {# SVG sprite #}
 <svg width="0" height="0" style="position:absolute;" aria-hidden="true">
@@ -78,7 +472,12 @@
 
   {% set card_cls = 'closed' if is_closed else ('overdue' if is_overdue else ('soon' if is_soon else '')) %}
 
-  <article class="asg-card {{ card_cls }}" id="asgCard-{{ a.id }}">
+  <article class="asg-card {{ card_cls }}" id="asgCard-{{ a.id }}"
+           data-asg-id="{{ a.id }}"
+           data-title="{{ (a.title or '')|lower }}"
+           data-subject="{{ (a.subject.name if a.subject else 'general')|lower }}"
+           data-teacher="{{ (a.author.name if a.author else '')|lower }}"
+           data-status="{{ 'done' if sub else ('pending' if a.status == 'open' else 'closed') }}">
 
     {# ---- Header ---- #}
     <header class="asg-head">
@@ -430,63 +829,126 @@
    STUDENT MODE: Subject-Wise UI
    ============================================================ #}
 {% if mode == 'student' %}
-  {# Student Metric Counters Strip #}
-  <div class="asg-student-summary-strip">
-    <span class="asg-metric-chip">
-      📚 <b>{{ subject_wise|length }}</b> Subjects
-    </span>
-    <span class="asg-metric-chip">
-      📝 <b>{{ total_asgs }}</b> Total Assignments
-    </span>
-    <span class="asg-metric-chip {% if total_pending > 0 %}pending{% endif %}">
-      ⏳ <b>{{ total_pending }}</b> Pending
-    </span>
-    <span class="asg-metric-chip {% if total_submitted > 0 %}done{% endif %}">
-      ✓ <b>{{ total_submitted }}</b> Completed / Graded
-    </span>
-  </div>
-
-  {# Subject Navigation Pills Bar #}
-  <div class="asg-sub-bar-wrap">
-    <div class="asg-sub-bar" id="asgSubBar" role="tablist">
-      <button type="button" class="asg-sub-pill active" data-sub="all" onclick="filterSubject('all', this)">
-        <span>🌟 All Subjects</span>
-        <span class="pill-count">{{ total_asgs }}</span>
-      </button>
-      {% for item in subject_wise %}
-        <button type="button" class="asg-sub-pill" data-sub="{{ item.id }}" onclick="filterSubject('{{ item.id }}', this)">
-          <span>{{ item.icon }} {{ item.name }}</span>
-          <span class="pill-count">{{ item.total_count }}</span>
-          {% if item.pending_count > 0 %}
-            <span class="pending-dot" title="{{ item.pending_count }} pending"></span>
-          {% endif %}
-        </button>
-      {% endfor %}
-      {% if general_assignments %}
-        <button type="button" class="asg-sub-pill" data-sub="general" onclick="filterSubject('general', this)">
-          <span>📄 General / Other</span>
-          <span class="pill-count">{{ general_assignments|length }}</span>
-        </button>
-      {% endif %}
+  {# 1. Student Summary Metric Cards #}
+  <div class="asg-summary-grid">
+    <div class="asg-stat-card">
+      <div class="asg-sc-icon blue">📚</div>
+      <div class="asg-sc-info">
+        <span class="asg-sc-val">{{ subject_wise|length }}</span>
+        <span class="asg-sc-lbl">Subjects</span>
+      </div>
     </div>
-
-    <div style="display:flex;align-items:center;gap:6px;">
-      <button type="button" class="btn sm outline" id="btnViewToggle" onclick="toggleViewMode()" style="padding:6px 12px;font-size:12px;">
-        <span id="viewToggleLabel">📋 Flat List View</span>
-      </button>
+    <div class="asg-stat-card">
+      <div class="asg-sc-icon purple">📝</div>
+      <div class="asg-sc-info">
+        <span class="asg-sc-val">{{ total_asgs }}</span>
+        <span class="asg-sc-lbl">Total Tasks</span>
+      </div>
+    </div>
+    <div class="asg-stat-card {% if total_pending > 0 %}pending{% endif %}">
+      <div class="asg-sc-icon amber">⏳</div>
+      <div class="asg-sc-info">
+        <span class="asg-sc-val">{{ total_pending }}</span>
+        <span class="asg-sc-lbl">Pending</span>
+      </div>
+    </div>
+    <div class="asg-stat-card {% if total_submitted > 0 %}done{% endif %}">
+      <div class="asg-sc-icon green">✓</div>
+      <div class="asg-sc-info">
+        <span class="asg-sc-val">{{ total_submitted }}</span>
+        <span class="asg-sc-lbl">Completed</span>
+      </div>
     </div>
   </div>
 
-  {# Subject-wise Sections Container #}
+  {# 2. Unified Filter & Search Controls Card #}
+  <div class="asg-controls-card">
+    {# Search & Status Filters Row #}
+    <div class="asg-search-row">
+      <div class="asg-search-input-box">
+        <span class="asg-sib-icon">🔍</span>
+        <input type="text" id="asgSearchInput" class="asg-main-search"
+               placeholder="Search assignments, topics, faculty..."
+               autocomplete="off"
+               oninput="onSearchInput(this.value)">
+        <button type="button" id="asgSearchClearBtn" class="asg-clear-btn" onclick="clearSearch()" style="display:none;" aria-label="Clear search">✕</button>
+      </div>
+
+      {# Status Filter Segment #}
+      <div class="asg-status-seg" role="tablist">
+        <button type="button" class="asg-seg-btn active" data-status="all" onclick="filterByStatus('all', this)">
+          All <span class="sf-cnt">{{ total_asgs }}</span>
+        </button>
+        <button type="button" class="asg-seg-btn" data-status="pending" onclick="filterByStatus('pending', this)">
+          ⏳ Pending <span class="sf-cnt">{{ total_pending }}</span>
+        </button>
+        <button type="button" class="asg-seg-btn" data-status="done" onclick="filterByStatus('done', this)">
+          ✓ Done <span class="sf-cnt">{{ total_submitted }}</span>
+        </button>
+      </div>
+
+      {# View Mode Toggle #}
+      <div class="asg-view-toggle-box">
+        <button type="button" class="btn sm outline asg-vt-btn" id="btnViewToggle" onclick="toggleViewMode()" title="Toggle View">
+          <span id="viewToggleLabel">📋 Flat List</span>
+        </button>
+      </div>
+    </div>
+
+    {# Horizontal Subject Scroll Rail #}
+    <div class="asg-sub-rail-wrap">
+      <div class="asg-sub-rail" id="asgSubRail" role="tablist">
+        <button type="button" class="asg-rail-pill active" data-sub="all" onclick="filterBySubject('all', this)">
+          <span class="pill-icon">🌟</span>
+          <span class="pill-title">All Subjects</span>
+          <span class="pill-badge">{{ total_asgs }}</span>
+        </button>
+        {% for item in subject_wise %}
+          <button type="button" class="asg-rail-pill {% if item.total_count == 0 %}is-zero{% endif %}"
+                  data-sub="{{ item.id }}" onclick="filterBySubject('{{ item.id }}', this)">
+            <span class="pill-icon">{{ item.icon }}</span>
+            <span class="pill-title">{{ item.name }}</span>
+            <span class="pill-badge {% if item.pending_count > 0 %}amber{% endif %}">
+              {{ item.total_count }}
+            </span>
+            {% if item.pending_count > 0 %}
+              <span class="rail-pending-dot" title="{{ item.pending_count }} pending"></span>
+            {% endif %}
+          </button>
+        {% endfor %}
+        {% if general_assignments %}
+          <button type="button" class="asg-rail-pill" data-sub="general" onclick="filterBySubject('general', this)">
+            <span class="pill-icon">📄</span>
+            <span class="pill-title">General / Other</span>
+            <span class="pill-badge">{{ general_assignments|length }}</span>
+          </button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# Friendly No Search Results banner #}
+  <div class="asg-no-search-results" id="asgNoResults" style="display:none;">
+    <div class="nsr-icon">🔍</div>
+    <h4>No matching assignments</h4>
+    <p id="asgNoResultsMsg">No assignments match your search or filter criteria.</p>
+    <button type="button" class="asg-btn sm primary" onclick="resetAllFilters()">Reset All Filters</button>
+  </div>
+
+  {# 3. Subject-wise Sections Container #}
   <div id="subjectViewContainer">
+    {% set zero_subjects = subject_wise | selectattr('total_count', 'equalto', 0) | list %}
     {% for item in subject_wise %}
-      <section class="asg-subject-section" id="subjSec-{{ item.id }}" data-subject-id="{{ item.id }}" data-has="{{ '1' if item.assignments else '0' }}">
+      <section class="asg-subject-section {% if item.total_count == 0 %}asg-sec-empty{% endif %}"
+               id="subjSec-{{ item.id }}"
+               data-subject-id="{{ item.id }}"
+               data-has="{{ '1' if item.assignments else '0' }}">
         <div class="asg-subject-header">
           <div class="asg-sh-left">
             <span class="asg-sh-icon">{{ item.icon }}</span>
             <div>
               <h2 class="asg-sh-title">{{ item.name }}</h2>
-              <div class="asg-sh-meta" style="margin-top:3px;">
+              <div class="asg-sh-meta">
                 {% if item.code %}<span class="badge blue" style="font-size:10.5px;padding:2px 7px;">{{ item.code }}</span>{% endif %}
                 <span class="small muted" style="font-size:11.5px;">👤 {{ item.teacher }}</span>
               </div>
@@ -538,9 +1000,23 @@
         </div>
       </section>
     {% endif %}
+
+    {# Summary Card for subjects with 0 assignments when in 'All' view #}
+    {% if zero_subjects %}
+      <div class="asg-all-caught-up-card" id="asgCaughtUpCard">
+        <div class="acu-icon">🎉</div>
+        <div class="acu-info">
+          <h4 class="acu-title">All caught up!</h4>
+          <p class="acu-desc">No assignments posted for <b>{{ zero_subjects|length }} other subject{{ 's' if zero_subjects|length > 1 else '' }}</b>.</p>
+        </div>
+        <button type="button" class="asg-btn sm outline" id="btnToggleEmptySubjs" onclick="toggleEmptySubjects(this)">
+          Show Empty Subjects ({{ zero_subjects|length }})
+        </button>
+      </div>
+    {% endif %}
   </div>
 
-  {# Flat Timeline View (Initially Hidden) #}
+  {# 4. Flat Timeline View (Initially Hidden) #}
   <div id="listViewContainer" style="display:none;">
     {% if assignments %}
       <div class="asg-grid">
@@ -662,38 +1138,187 @@ function onAssignFileSelect(input) {
   }
 }
 
-// Student View Filtering & Toggle
-function filterSubject(subId, pillBtn) {
-  // If we were in flat list view, toggle back to subject view
-  var subjectContainer = document.getElementById('subjectViewContainer');
-  var listContainer = document.getElementById('listViewContainer');
-  var toggleLabel = document.getElementById('viewToggleLabel');
-  if (subjectContainer && listContainer && subjectContainer.style.display === 'none') {
-    subjectContainer.style.display = '';
-    listContainer.style.display = 'none';
-    if (toggleLabel) toggleLabel.textContent = '📋 Flat List View';
-  }
+// =====================================================================
+// Student View Live Search, Status Filter & Subject Navigation
+// =====================================================================
+var currentSubFilter = 'all';
+var currentStatusFilter = 'all';
+var currentSearchQuery = '';
+var showingEmptySubjects = false;
 
-  // Update active pill
-  var pills = document.querySelectorAll('#asgSubBar .asg-sub-pill');
-  pills.forEach(function (p) { p.classList.remove('active'); });
+function onSearchInput(val) {
+  currentSearchQuery = (val || '').trim().toLowerCase();
+  var clearBtn = document.getElementById('asgSearchClearBtn');
+  if (clearBtn) clearBtn.style.display = currentSearchQuery ? 'block' : 'none';
+  applyStudentFilters();
+}
+
+function clearSearch() {
+  var inEl = document.getElementById('asgSearchInput');
+  if (inEl) inEl.value = '';
+  currentSearchQuery = '';
+  var clearBtn = document.getElementById('asgSearchClearBtn');
+  if (clearBtn) clearBtn.style.display = 'none';
+  applyStudentFilters();
+}
+
+function filterByStatus(status, btn) {
+  currentStatusFilter = status;
+  var segBtns = document.querySelectorAll('.asg-seg-btn');
+  segBtns.forEach(function (b) { b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  applyStudentFilters();
+}
+
+function filterBySubject(subId, pillBtn) {
+  currentSubFilter = String(subId);
+  var railPills = document.querySelectorAll('.asg-rail-pill');
+  railPills.forEach(function (p) { p.classList.remove('active'); });
   if (pillBtn) {
     pillBtn.classList.add('active');
     try {
       pillBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     } catch (e) {}
   }
+  applyStudentFilters();
+}
 
-  // Filter sections
-  var sections = document.querySelectorAll('.asg-subject-section');
-  sections.forEach(function (sec) {
-    var sid = sec.getAttribute('data-subject-id');
-    if (subId === 'all' || sid === String(subId)) {
-      sec.style.display = '';
-    } else {
-      sec.style.display = 'none';
-    }
+// Backward compatibility alias for filterSubject
+function filterSubject(subId, pillBtn) {
+  filterBySubject(subId, pillBtn);
+}
+
+function toggleEmptySubjects(btn) {
+  showingEmptySubjects = !showingEmptySubjects;
+  var totalEmpty = document.querySelectorAll('.asg-sec-empty').length;
+  if (btn) {
+    btn.textContent = showingEmptySubjects ? 'Hide Empty Subjects' : 'Show Empty Subjects (' + totalEmpty + ')';
+  }
+  applyStudentFilters();
+}
+
+function resetAllFilters() {
+  currentSubFilter = 'all';
+  currentStatusFilter = 'all';
+  currentSearchQuery = '';
+  showingEmptySubjects = false;
+
+  var inEl = document.getElementById('asgSearchInput');
+  if (inEl) inEl.value = '';
+  var clearBtn = document.getElementById('asgSearchClearBtn');
+  if (clearBtn) clearBtn.style.display = 'none';
+
+  var segBtns = document.querySelectorAll('.asg-seg-btn');
+  segBtns.forEach(function (b) {
+    b.classList.toggle('active', b.getAttribute('data-status') === 'all');
   });
+
+  var railPills = document.querySelectorAll('.asg-rail-pill');
+  railPills.forEach(function (p) {
+    p.classList.toggle('active', p.getAttribute('data-sub') === 'all');
+  });
+
+  var emptyToggleBtn = document.getElementById('btnToggleEmptySubjs');
+  if (emptyToggleBtn) {
+    var totalEmpty = document.querySelectorAll('.asg-sec-empty').length;
+    emptyToggleBtn.textContent = 'Show Empty Subjects (' + totalEmpty + ')';
+  }
+
+  applyStudentFilters();
+}
+
+function applyStudentFilters() {
+  var q = currentSearchQuery;
+  var status = currentStatusFilter;
+  var sub = currentSubFilter;
+  var isSearchingOrFiltering = (q !== '' || status !== 'all');
+
+  var subjectContainer = document.getElementById('subjectViewContainer');
+  var listContainer = document.getElementById('listViewContainer');
+  var isListView = listContainer && listContainer.style.display !== 'none';
+
+  var totalVisibleCards = 0;
+
+  if (isListView) {
+    var allCards = listContainer.querySelectorAll('.asg-card');
+    allCards.forEach(function (card) {
+      var cTitle = card.getAttribute('data-title') || '';
+      var cSub = card.getAttribute('data-subject') || '';
+      var cTeacher = card.getAttribute('data-teacher') || '';
+      var cStatus = card.getAttribute('data-status') || '';
+
+      var matchesSearch = (!q || cTitle.indexOf(q) !== -1 || cSub.indexOf(q) !== -1 || cTeacher.indexOf(q) !== -1);
+      var matchesStatus = (status === 'all' || cStatus === status);
+
+      var isVisible = matchesSearch && matchesStatus;
+      card.style.display = isVisible ? '' : 'none';
+      if (isVisible) totalVisibleCards++;
+    });
+  } else if (subjectContainer) {
+    var sections = subjectContainer.querySelectorAll('.asg-subject-section');
+    sections.forEach(function (sec) {
+      var secSubId = sec.getAttribute('data-subject-id');
+      var hasAsgs = sec.getAttribute('data-has') === '1';
+
+      var matchesSub = (sub === 'all' || sub === secSubId);
+      if (!matchesSub) {
+        sec.style.display = 'none';
+        return;
+      }
+
+      var secCards = sec.querySelectorAll('.asg-card');
+      var secVisibleCards = 0;
+
+      secCards.forEach(function (card) {
+        var cTitle = card.getAttribute('data-title') || '';
+        var cSub = card.getAttribute('data-subject') || '';
+        var cTeacher = card.getAttribute('data-teacher') || '';
+        var cStatus = card.getAttribute('data-status') || '';
+
+        var matchesSearch = (!q || cTitle.indexOf(q) !== -1 || cSub.indexOf(q) !== -1 || cTeacher.indexOf(q) !== -1);
+        var matchesStatus = (status === 'all' || cStatus === status);
+
+        var isVisible = matchesSearch && matchesStatus;
+        card.style.display = isVisible ? '' : 'none';
+        if (isVisible) {
+          secVisibleCards++;
+          totalVisibleCards++;
+        }
+      });
+
+      if (sub === 'all') {
+        if (hasAsgs) {
+          sec.style.display = (isSearchingOrFiltering && secVisibleCards === 0) ? 'none' : '';
+        } else {
+          sec.style.display = (showingEmptySubjects && !isSearchingOrFiltering) ? '' : 'none';
+        }
+      } else {
+        sec.style.display = '';
+        var emptyBox = sec.querySelector('.asg-subject-empty');
+        if (emptyBox) {
+          emptyBox.style.display = (!hasAsgs || (isSearchingOrFiltering && secVisibleCards === 0)) ? '' : 'none';
+        }
+      }
+    });
+
+    var caughtUpCard = document.getElementById('asgCaughtUpCard');
+    if (caughtUpCard) {
+      var shouldShowCaughtUp = (sub === 'all' && !isSearchingOrFiltering && !showingEmptySubjects);
+      caughtUpCard.style.display = shouldShowCaughtUp ? 'flex' : 'none';
+    }
+  }
+
+  var noResults = document.getElementById('asgNoResults');
+  var noResultsMsg = document.getElementById('asgNoResultsMsg');
+  if (noResults) {
+    var hasNoResults = (isSearchingOrFiltering && totalVisibleCards === 0);
+    noResults.style.display = hasNoResults ? 'block' : 'none';
+    if (noResultsMsg && q) {
+      noResultsMsg.textContent = 'No assignments found matching "' + q + '".';
+    } else if (noResultsMsg && status !== 'all') {
+      noResultsMsg.textContent = 'No ' + status + ' assignments found.';
+    }
+  }
 }
 
 function toggleViewMode() {
@@ -707,13 +1332,15 @@ function toggleViewMode() {
   if (isSubjectView) {
     subjectContainer.style.display = 'none';
     listContainer.style.display = '';
-    if (toggleLabel) toggleLabel.textContent = '📚 Subject-Wise View';
+    if (toggleLabel) toggleLabel.textContent = '📚 Subject View';
   } else {
     subjectContainer.style.display = '';
     listContainer.style.display = 'none';
-    if (toggleLabel) toggleLabel.textContent = '📋 Flat List View';
+    if (toggleLabel) toggleLabel.textContent = '📋 Flat List';
   }
+  applyStudentFilters();
 }
+
 
 // Toggle Tracker Drawer
 function toggleTracker(aid) {
