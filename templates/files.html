@@ -370,25 +370,60 @@
             <button type="button" class="mb-quick-btn" onclick="toggleAllBranches(false)">Clear</button>
           </div>
         </div>
-        <p class="mb-desc">Select multiple branch folders to upload this same file into them simultaneously:</p>
+        <p class="mb-desc">Select branches and choose the specific folder inside each branch for simultaneous upload:</p>
+
+        {# Quick Match Helper Bar #}
+        <div class="mb-quick-match-wrap">
+          <span class="mb-qm-icon">🔍</span>
+          <input type="text" class="mb-qm-input" id="mbQuickMatchInput"
+                 placeholder="Quick match folder in all branches (e.g. Chemistry, Notes, Sem 1)..."
+                 oninput="quickMatchAllBranches(this.value)">
+        </div>
+
         <div class="mb-grid">
           {% for bf in allowed_root_branch_folders %}
-            <label class="mb-card" id="mbCard-{{ bf.id }}">
-              <input type="checkbox" name="branch_folder_ids" value="{{ bf.id }}" class="mb-checkbox" onchange="onBranchCheckChange(this)">
-              <span class="mb-card-body">
+            <div class="mb-branch-item" id="mbItem-{{ bf.id }}">
+              <label class="mb-item-head" for="chkBranch-{{ bf.id }}">
+                <input type="checkbox" name="branch_folder_ids" value="{{ bf.id }}"
+                       id="chkBranch-{{ bf.id }}" class="mb-checkbox"
+                       onchange="onBranchCheckChange(this, {{ bf.id }})">
                 <span class="mb-icon">📁</span>
                 <span class="mb-info">
                   <span class="mb-name" title="{{ bf.name }}">{{ bf.name }}</span>
                   <span class="mb-code">{{ branches_map.get(bf.branch_id, '') }}</span>
                 </span>
                 <span class="mb-check-indicator">✓</span>
-              </span>
-            </label>
+              </label>
+
+              {# Individual Branch Subfolder Selector Drawer #}
+              <div class="mb-folder-drawer" id="mbDrawer-{{ bf.id }}" style="display:none;">
+                <div class="mb-fd-inner">
+                  <label class="mb-fd-label" for="selFolder-{{ bf.id }}">
+                    <span>📂 Select Folder in {{ branches_map.get(bf.branch_id, bf.name) }}:</span>
+                  </label>
+                  <div class="mb-select-wrapper">
+                    <select name="branch_target_folder_{{ bf.id }}" id="selFolder-{{ bf.id }}"
+                            class="mb-folder-select" onchange="onFolderOptionChange({{ bf.id }}, this)">
+                      {% for opt in branch_subfolders.get(bf.id, []) %}
+                        <option value="{{ opt.id }}" {% if loop.first %}selected{% endif %}>
+                          {{ opt.path }}
+                        </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="mb-fd-crumb">
+                    <span class="crumb-lead">📍 Target:</span>
+                    <span class="crumb-path" id="crumbPath-{{ bf.id }}">{{ bf.name }} (Root)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           {% endfor %}
         </div>
+
         <div class="mb-status-bar" id="mbStatusBar" style="display:none;">
           <span class="mb-sb-icon">⚡</span>
-          <span>File will be uploaded to <b id="mbSelectedCount">0</b> branch folders simultaneously</span>
+          <span>Uploading simultaneously to <b id="mbSelectedCount">0</b> destination folder(s)</span>
         </div>
       </div>
       {% endif %}
@@ -543,6 +578,7 @@
   flex-shrink: 0;
 }
 
+
 /* Multi-Branch Selector in Upload Modal */
 .multi-branch-container {
   margin-top: 10px;
@@ -550,7 +586,7 @@
   padding: 12px 14px;
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 14px;
 }
 .mb-header {
   display: flex;
@@ -603,48 +639,84 @@
   color: var(--text-3);
   line-height: 1.4;
 }
-.mb-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+
+/* Quick Match Bar */
+.mb-quick-match-wrap {
+  display: flex;
+  align-items: center;
   gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  transition: all .15s;
 }
-@media (max-width: 600px) {
-  .mb-grid {
-    grid-template-columns: 1fr;
-  }
+.mb-quick-match-wrap:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
-.mb-card {
-  position: relative;
-  display: block;
-  margin: 0;
+.mb-qm-icon {
+  font-size: 13px;
+  opacity: .75;
+}
+.mb-qm-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--text);
+  padding: 0;
+}
+.mb-qm-input::placeholder {
+  color: var(--text-3);
+}
+
+/* Branch Grid */
+.mb-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.mb-branch-item {
+  border: 1.5px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+  overflow: hidden;
+  transition: all .16s ease;
+}
+.mb-branch-item:hover {
+  border-color: var(--border-strong);
+}
+.mb-branch-item.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.08);
+}
+.mb-item-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
   cursor: pointer;
   user-select: none;
+  margin: 0;
+  min-height: 44px;
+  transition: background .14s ease;
 }
-.mb-card input[type="checkbox"] {
+.mb-item-head:hover {
+  background: var(--surface-2);
+}
+.mb-branch-item.is-selected .mb-item-head {
+  background: var(--accent-soft);
+}
+.mb-item-head input[type="checkbox"] {
   position: absolute;
   opacity: 0;
   width: 0;
   height: 0;
   pointer-events: none;
-}
-.mb-card-body {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 12px;
-  border-radius: 10px;
-  border: 1.5px solid var(--border);
-  background: var(--surface);
-  transition: all .15s ease;
-}
-.mb-card:hover .mb-card-body {
-  border-color: var(--accent);
-  background: var(--surface-2);
-}
-.mb-card.selected .mb-card-body {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  box-shadow: 0 0 0 1px var(--accent);
 }
 .mb-icon {
   font-size: 17px;
@@ -659,7 +731,7 @@
   flex-direction: column;
 }
 .mb-name {
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
   color: var(--text);
   overflow: hidden;
@@ -672,7 +744,7 @@
   color: var(--text-3);
   margin-top: 1px;
 }
-.mb-card.selected .mb-code {
+.mb-branch-item.is-selected .mb-code {
   color: var(--accent);
 }
 .mb-check-indicator {
@@ -689,11 +761,93 @@
   flex-shrink: 0;
   transition: all .15s ease;
 }
-.mb-card.selected .mb-check-indicator {
+.mb-branch-item.is-selected .mb-check-indicator {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
 }
+
+/* Individual Branch Folder Drawer */
+.mb-folder-drawer {
+  padding: 10px 12px 12px;
+  background: var(--surface);
+  border-top: 1px dashed rgba(59, 130, 246, 0.25);
+  animation: mb-slide-down .18s ease-out;
+}
+@keyframes mb-slide-down {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.mb-fd-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mb-fd-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-2);
+  margin: 0;
+}
+.mb-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+.mb-folder-select {
+  width: 100%;
+  padding: 8px 30px 8px 10px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: border-color .14s;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.mb-select-wrapper::after {
+  content: '▾';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-3);
+  font-size: 12px;
+  pointer-events: none;
+}
+.mb-folder-select:focus {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+.mb-fd-crumb {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  color: var(--text-3);
+  margin-top: 2px;
+  overflow: hidden;
+}
+.crumb-lead {
+  font-weight: 700;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.crumb-path {
+  font-weight: 600;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .mb-status-bar {
   margin-top: 10px;
   padding: 8px 12px;
@@ -708,6 +862,18 @@
 }
 .mb-sb-icon {
   font-size: 14px;
+}
+
+@media (max-width: 600px) {
+  .mb-folder-select {
+    font-size: 16px;
+    padding: 10px 30px 10px 10px;
+    touch-action: manipulation;
+  }
+  .mb-qm-input {
+    font-size: 16px;
+    touch-action: manipulation;
+  }
 }
 </style>
 
@@ -744,30 +910,77 @@ window.pickDestination = function () {
   });
 };
 
-function onBranchCheckChange(input) {
-  var card = input.closest('.mb-card');
-  if (card) {
-    card.classList.toggle('selected', input.checked);
+function onBranchCheckChange(input, bfid) {
+  var item = document.getElementById('mbItem-' + bfid);
+  var drawer = document.getElementById('mbDrawer-' + bfid);
+  if (item) {
+    item.classList.toggle('is-selected', input.checked);
+  }
+  if (drawer) {
+    drawer.style.display = input.checked ? 'block' : 'none';
   }
   updateBranchSelectedCount();
+}
+
+function onFolderOptionChange(bfid, selectEl) {
+  var crumb = document.getElementById('crumbPath-' + bfid);
+  if (crumb && selectEl.selectedIndex >= 0) {
+    var txt = selectEl.options[selectEl.selectedIndex].text;
+    crumb.textContent = txt;
+  }
 }
 
 function toggleAllBranches(select) {
   var container = document.getElementById('multiBranchContainer');
   if (!container) return;
-  var checks = container.querySelectorAll('input[type="checkbox"]');
-  checks.forEach(function (c) {
-    c.checked = select;
-    var card = c.closest('.mb-card');
-    if (card) card.classList.toggle('selected', select);
+  var items = container.querySelectorAll('.mb-branch-item');
+  items.forEach(function (item) {
+    var chk = item.querySelector('.mb-checkbox');
+    if (chk) {
+      chk.checked = select;
+      item.classList.toggle('is-selected', select);
+      var bfid = chk.value;
+      var drawer = document.getElementById('mbDrawer-' + bfid);
+      if (drawer) {
+        drawer.style.display = select ? 'block' : 'none';
+      }
+    }
   });
   updateBranchSelectedCount();
+}
+
+function quickMatchAllBranches(query) {
+  var q = (query || '').trim().toLowerCase();
+  if (!q) return;
+
+  var container = document.getElementById('multiBranchContainer');
+  if (!container) return;
+
+  var selects = container.querySelectorAll('.mb-folder-select');
+  selects.forEach(function (sel) {
+    var bfid = sel.id.replace('selFolder-', '');
+    var options = sel.options;
+    var bestMatchIdx = -1;
+
+    for (var i = 0; i < options.length; i++) {
+      var optText = options[i].text.toLowerCase();
+      if (optText.indexOf(q) !== -1) {
+        bestMatchIdx = i;
+        break;
+      }
+    }
+
+    if (bestMatchIdx >= 0) {
+      sel.selectedIndex = bestMatchIdx;
+      onFolderOptionChange(bfid, sel);
+    }
+  });
 }
 
 function updateBranchSelectedCount() {
   var container = document.getElementById('multiBranchContainer');
   if (!container) return;
-  var checked = container.querySelectorAll('input[type="checkbox"]:checked');
+  var checked = container.querySelectorAll('input.mb-checkbox:checked');
   var count = checked.length;
   var statusBar = document.getElementById('mbStatusBar');
   var countEl = document.getElementById('mbSelectedCount');
@@ -779,9 +992,9 @@ function updateBranchSelectedCount() {
   }
   if (btn) {
     if (count > 1) {
-      btn.textContent = 'Upload to ' + count + ' Branches';
+      btn.textContent = 'Upload to ' + count + ' Folders';
     } else if (count === 1) {
-      btn.textContent = 'Upload to 1 Branch';
+      btn.textContent = 'Upload to 1 Folder';
     } else {
       btn.textContent = 'Upload';
     }
@@ -811,6 +1024,7 @@ function updateMultiBranchVisibility() {
     toggleAllBranches(false);
   }
 }
+
 
 function replaceFile(id, name) {
   document.getElementById('replaceForm').action = '/files/' + id + '/replace';
