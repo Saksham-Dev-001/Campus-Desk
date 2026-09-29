@@ -879,3 +879,183 @@
     justify-content: center;
   }
 }
+
+/* =====================================================================
+   Subject-wise UI for Students
+   ===================================================================== */
+.asg-student-summary-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.asg-metric-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+.asg-metric-chip b {
+  color: var(--accent);
+}
+.asg-metric-chip.pending b {
+  color: var(--warn);
+}
+.asg-metric-chip.done b {
+  color: var(--success);
+}
+
+/* Subject Navigation Pills Bar */
+.asg-sub-bar-wrap {
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.asg-sub-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 2px 8px;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+.asg-sub-bar::-webkit-scrollbar {
+  height: 5px;
+}
+.asg-sub-bar::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+}
+.asg-sub-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .16s ease;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+.asg-sub-pill:hover {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+.asg-sub-pill.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  box-shadow: 0 4px 12px rgba(43,92,255,.25);
+}
+.asg-sub-pill .pill-count {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--surface-2);
+  color: var(--text);
+  transition: all .16s ease;
+}
+.asg-sub-pill.active .pill-count {
+  background: rgba(255,255,255,.25);
+  color: #fff;
+}
+.asg-sub-pill .pending-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245,158,11,.25);
+}
+
+/* Subject Section Container */
+.asg-subject-section {
+  margin-bottom: 28px;
+  transition: opacity .2s ease;
+}
+.asg-subject-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  margin-bottom: 12px;
+  border-left: 4px solid var(--accent);
+}
+.asg-sh-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.asg-sh-icon {
+  font-size: 20px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(43,92,255,.08);
+  flex-shrink: 0;
+}
+.asg-sh-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  letter-spacing: -.2px;
+}
+.asg-sh-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.asg-subject-empty {
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  color: var(--text-3);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.asg-subject-empty .empty-icon {
+  color: var(--success);
+  font-weight: 700;
+  font-size: 15px;
+}
+
