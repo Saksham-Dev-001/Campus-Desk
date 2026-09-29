@@ -131,9 +131,17 @@ def dashboard():
     notices = nq.order_by(Notice.publish_date.desc()).limit(5).all()
 
     aq = Assignment.query
-    if teacher and teacher.branch_id:
+    if not current_user.is_admin and current_user.role == "teacher":
+        aq = aq.filter(Assignment.created_by == current_user.id)
+    elif teacher and teacher.branch_id:
         aq = aq.filter(or_(Assignment.branch_id.is_(None), Assignment.branch_id == teacher.branch_id))
     assignments = aq.order_by(Assignment.publish_date.desc()).limit(5).all()
+
+    if not current_user.is_admin and current_user.role == "teacher":
+        total_submissions = db.session.query(AssignmentSubmission).join(Assignment)\
+            .filter(Assignment.created_by == current_user.id).count()
+    else:
+        total_submissions = AssignmentSubmission.query.count()
 
     return render_template("dashboard_teacher.html", teacher=teacher,
                            total_students=total_students,
@@ -141,7 +149,7 @@ def dashboard():
                            assignments=assignments,
                            recent_files=recent_files,
                            pending_requests=StudentRequest.query.filter_by(status="pending").count(),
-                           total_submissions=AssignmentSubmission.query.count())
+                           total_submissions=total_submissions)
 
 # ---------------------------------------------------------------------------
 # Profile
@@ -424,9 +432,7 @@ def assignments():
 
     q = Assignment.query
     if not current_user.is_admin and current_user.role == "teacher":
-        allowed = current_user.allowed_branch_ids()
-        if allowed:
-            q = q.filter(or_(Assignment.branch_id.is_(None), Assignment.branch_id.in_(allowed)))
+        q = q.filter(Assignment.created_by == current_user.id)
     items = q.order_by(Assignment.publish_date.desc()).all()
 
     # Build rich offline roster & statistics for each assignment
@@ -476,6 +482,8 @@ def mark_student_submission(aid):
     _require_teacher()
     a = Assignment.query.get_or_404(aid)
     if not current_user.is_admin and current_user.role == "teacher":
+        if a.created_by != current_user.id:
+            abort(403)
         if a.branch_id and not current_user.can_write_branch(a.branch_id):
             abort(403)
 
@@ -565,6 +573,8 @@ def mark_all_students(aid):
     _require_teacher()
     a = Assignment.query.get_or_404(aid)
     if not current_user.is_admin and current_user.role == "teacher":
+        if a.created_by != current_user.id:
+            abort(403)
         if a.branch_id and not current_user.can_write_branch(a.branch_id):
             abort(403)
 
@@ -604,6 +614,8 @@ def close_assignment(aid):
     _require_teacher()
     a = Assignment.query.get_or_404(aid)
     if not current_user.is_admin and current_user.role == "teacher":
+        if a.created_by != current_user.id:
+            abort(403)
         if a.branch_id and not current_user.can_write_branch(a.branch_id):
             abort(403)
     a.status = "closed"
@@ -618,6 +630,8 @@ def reopen_assignment(aid):
     _require_teacher()
     a = Assignment.query.get_or_404(aid)
     if not current_user.is_admin and current_user.role == "teacher":
+        if a.created_by != current_user.id:
+            abort(403)
         if a.branch_id and not current_user.can_write_branch(a.branch_id):
             abort(403)
     a.status = "open"
@@ -632,6 +646,8 @@ def delete_assignment(aid):
     _require_teacher()
     a = Assignment.query.get_or_404(aid)
     if not current_user.is_admin and current_user.role == "teacher":
+        if a.created_by != current_user.id:
+            abort(403)
         if a.branch_id and not current_user.can_write_branch(a.branch_id):
             abort(403)
     title = a.title
@@ -656,6 +672,9 @@ def delete_assignment(aid):
 def grade_submission(sid):
     _require_teacher()
     sub = AssignmentSubmission.query.get_or_404(sid)
+    if not current_user.is_admin and current_user.role == "teacher":
+        if sub.assignment.created_by != current_user.id:
+            abort(403)
     sub.grade = (request.form.get("grade") or "").strip()[:10]
     sub.feedback = (request.form.get("feedback") or "").strip()[:1000]
     sub.status = "graded" if sub.grade else "submitted"
