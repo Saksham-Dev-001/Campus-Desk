@@ -166,21 +166,34 @@ def _hide(q):
         q = q.filter(~FileRecord.filename.ilike(x + "%"))
     return q
 
-def _try_delete_storage(ref):
-    """Best-effort storage delete. Never raises."""
+def _try_delete_storage(ref, excluding_file_id=None):
+    """Best-effort storage delete. Never raises. Only deletes physical file if not shared by other records."""
     if not ref:
         return
     try:
+        # Check if other active FileRecord or FileVersion references this storage_ref
+        q_rec = FileRecord.query.filter(FileRecord.storage_ref == ref)
+        if excluding_file_id:
+            q_rec = q_rec.filter(FileRecord.id != excluding_file_id)
+        if q_rec.first():
+            return
+
+        q_ver = FileVersion.query.filter(FileVersion.storage_ref == ref)
+        if excluding_file_id:
+            q_ver = q_ver.filter(FileVersion.file_id != excluding_file_id)
+        if q_ver.first():
+            return
+
         _p().delete_file(ref)
     except Exception as e:
         current_app.logger.warning("Storage delete failed for %s: %s", ref, e)
 
 def _delete_file_full(r):
     """Remove storage, versions, FK refs, and the DB row. Commit happens by caller."""
-    _try_delete_storage(r.storage_ref)
+    _try_delete_storage(r.storage_ref, excluding_file_id=r.id)
     for v in FileVersion.query.filter_by(file_id=r.id).all():
         if v.storage_ref and v.storage_ref != r.storage_ref:
-            _try_delete_storage(v.storage_ref)
+            _try_delete_storage(v.storage_ref, excluding_file_id=r.id)
     FileVersion.query.filter_by(file_id=r.id).delete()
     _clean_file_references(r)
     db.session.delete(r)
@@ -193,6 +206,33 @@ def _delrec(f, c):
         _delrec(x, c)
     db.session.delete(f)
     c["folders"] += 1
+
+def _get_allowed_root_branch_folders(user):
+    """Return root branch folders that user has write/manage permission for."""
+    if not user.is_authenticated or user.role not in ("teacher", "admin", "student_admin"):
+        return []
+
+    root_folders = Folder.query.filter(
+        Folder.parent_id.is_(None),
+        Folder.branch_id.isnot(None)
+    ).order_by(Folder.name).all()
+
+    if user.is_admin:
+        return root_folders
+
+    if user.role == "teacher":
+        t = user.teacher
+        if t and t.is_global:
+            return root_folders
+        allowed_bids = set(user.allowed_branch_ids())
+        return [f for f in root_folders if f.branch_id in allowed_bids]
+
+    if user.role == "student_admin":
+        s = Student.query.filter_by(user_id=user.id).first()
+        if s and s.branch_id:
+            return [f for f in root_folders if f.branch_id == s.branch_id]
+
+    return []
 
 @files_bp.route("/files")
 @login_required
@@ -233,10 +273,14 @@ def browse():
         c = c.parent
     crumbs.reverse()
     cm = current_user.role in ("teacher", "admin", "student_admin")
+    allowed_root_branch_folders = _get_allowed_root_branch_folders(current_user)
+    branches_map = {b.id: b.code for b in Branch.query.all()}
     return render_template("files.html", current=cur, crumbs=crumbs,
                            folders=folders, files=files,
                            target_label=target_label, can_manage=cm,
-                           can_manage_item=_can_manage_item)
+                           can_manage_item=_can_manage_item,
+                           allowed_root_branch_folders=allowed_root_branch_folders,
+                           branches_map=branches_map)
 
 @files_bp.route("/folders/create", methods=["POST"])
 @login_required
@@ -312,6 +356,72 @@ def upload_file():
         flash("That file type is not allowed.", "error")
         return redirect(_safe_back())
     fid = request.form.get("folder_id", type=int) or None
+    branch_folder_ids = request.form.getlist("branch_folder_ids", type=int)
+
+    # Multi-branch folder upload at Root
+    if not fid and branch_folder_ids:
+        valid_targets = []
+        for bfid in branch_folder_ids:
+            bf = Folder.query.get(bfid)
+            if bf and bf.parent_id is None and bf.branch_id is not None:
+                if current_user.is_admin:
+                    valid_targets.append(bf)
+                elif current_user.role == "teacher":
+                    t_user = current_user.teacher
+                    if (t_user and t_user.is_global) or current_user.can_write_branch(bf.branch_id):
+                        valid_targets.append(bf)
+                elif current_user.role == "student_admin":
+                    if current_user.can_write_branch(bf.branch_id):
+                        valid_targets.append(bf)
+
+        if not valid_targets:
+            flash("No permitted branch folders selected.", "error")
+            return redirect(_safe_back())
+
+        t_common = parse_target_from_form(request.form)
+        data = f.read()
+        orig = secure_filename(f.filename) or "file"
+        disp = (request.form.get("display_name") or orig).strip()[:255]
+        if "." not in disp and "." in orig:
+            e = orig.rsplit(".", 1)[1].lower()
+            if e in current_app.config["ALLOWED_EXTENSIONS"]:
+                disp = disp + "." + e
+
+        p = _p()
+        ref = p.upload_file(data, orig, branch_code=None, folder_path="Multi-Branch")
+        prov_name = "local" if ref.startswith("local:") else p.name
+
+        for tgt in valid_targets:
+            tgt_data = dict(t_common)
+            tgt_data["branch_id"] = tgt.branch_id
+            rec = FileRecord(
+                filename=disp,
+                original_filename=orig,
+                mime_type=f.mimetype,
+                size_bytes=len(data),
+                folder_id=tgt.id,
+                storage_provider=prov_name,
+                storage_ref=ref,
+                uploaded_by=current_user.id,
+                **tgt_data
+            )
+            db.session.add(rec)
+            db.session.flush()
+            db.session.add(FileVersion(
+                file_id=rec.id,
+                version=1,
+                storage_ref=ref,
+                original_filename=orig,
+                size_bytes=len(data),
+                uploaded_by=current_user.id
+            ))
+            _aud("file.upload", "FileRecord", rec.id, f"{disp} (multi-branch -> {tgt.name})")
+
+        db.session.commit()
+        b_names = [tgt.branch.code if tgt.branch else tgt.name for tgt in valid_targets]
+        flash(f"Uploaded '{disp}' to {len(valid_targets)} branch folders ({', '.join(b_names)}).", "success")
+        return redirect(url_for("files.browse"))
+
     folder = Folder.query.get(fid) if fid else None
     if folder and not _can_manage_item(folder):
         abort(403)
