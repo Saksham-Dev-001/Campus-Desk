@@ -199,12 +199,32 @@
 })();
 
 /* ---------------------------------------------------------------------
-   File preview — uses /api/files/<id>/preview (registered route)
-   Includes Smart Board presentation full-screen mode & smooth animations
+   File preview — Smart Board Classroom Presentation Suite
+   Includes:
+     * Smart Board 100% Fullscreen Mode
+     * Laser Pointer with pulsating aura & motion trail
+     * Dark Canvas / Projector Invert Mode for low-glare reading
+     * Zen Focus Mode (Auto-hide header for 100% canvas) & Floating Mini Dock
+     * In-Folder File Navigation (Prev/Next Note without exiting preview)
+     * Remote clicker / keyboard shortcuts (L, D, H, F, arrows, PageUp/Down)
    --------------------------------------------------------------------- */
 (function () {
   'use strict';
 
+  var currentPlaylist = [];
+  var currentPlaylistIndex = -1;
+
+  var isLaserActive = false;
+  var laserCanvas = null;
+  var laserCtx = null;
+  var laserPoints = [];
+  var laserAnimId = null;
+  var laserCurrentPos = null;
+
+  var isDarkCanvas = false;
+  var isZenMode = false;
+
+  /* ---------------- Smart Board Full Screen ---------------- */
   function updateSmartBoardUI(active) {
     var btn = document.getElementById('btnSmartBoard');
     var label = document.getElementById('smartBoardLabel');
@@ -237,7 +257,6 @@
       back.classList.add('is-smartboard');
       updateSmartBoardUI(true);
 
-      // Trigger HTML5 Fullscreen API on the document element for 100% smart board display
       try {
         var el = document.documentElement;
         if (el.requestFullscreen) {
@@ -250,7 +269,7 @@
       } catch (_) {}
 
       if (window.showToast) {
-        window.showToast('🎯 Smart Board Teaching Mode enabled! Full screen ready.', 'info', 2500);
+        window.showToast('🎯 Smart Board Teaching Mode enabled! Full screen ready.', 'info', 2200);
       }
     } else {
       window.exitSmartBoardMode();
@@ -273,7 +292,6 @@
     }
   };
 
-  // Sync state if user exits full screen via hardware button or Esc
   function handleFullscreenChange() {
     if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
       var shell = document.getElementById('previewShell');
@@ -290,6 +308,291 @@
   document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
   document.addEventListener('msfullscreenchange', handleFullscreenChange);
 
+  /* ---------------- In-Folder Playlist Navigation ---------------- */
+  function scanPlaylist(targetId) {
+    currentPlaylist = [];
+    currentPlaylistIndex = -1;
+
+    // 1. Files grid in files.html
+    var cards = document.querySelectorAll('.fcard[data-kind="file"]');
+    if (cards.length > 0) {
+      cards.forEach(function (card) {
+        var idStr = card.getAttribute('data-id');
+        if (!idStr) return;
+        var fid = parseInt(idStr, 10);
+        var nameEl = card.querySelector('.fcard-name');
+        var name = nameEl ? nameEl.textContent.trim() : 'File';
+        var btn = card.querySelector('button[onclick*="previewFile"]');
+        if (btn) {
+          var m = btn.getAttribute('onclick').match(/previewFile\(\s*\d+\s*,\s*['"](.*?)['"]\s*,\s*['"](.*?)['"]\s*\)/);
+          var mime = m ? m[2] : '';
+          currentPlaylist.push({ id: fid, filename: name, mimeType: mime });
+        }
+      });
+    }
+
+    // 2. Generic fallback across any page
+    if (currentPlaylist.length === 0) {
+      var allBtns = document.querySelectorAll('[onclick*="previewFile"]');
+      var seen = {};
+      allBtns.forEach(function (b) {
+        var oc = b.getAttribute('onclick') || '';
+        var m = oc.match(/previewFile\(\s*(\d+)\s*,\s*['"](.*?)['"]\s*,\s*['"](.*?)['"]\s*\)/);
+        if (m && !seen[m[1]]) {
+          seen[m[1]] = true;
+          currentPlaylist.push({ id: parseInt(m[1], 10), filename: m[2], mimeType: m[3] });
+        }
+      });
+    }
+
+    for (var i = 0; i < currentPlaylist.length; i++) {
+      if (currentPlaylist[i].id === targetId) {
+        currentPlaylistIndex = i;
+        break;
+      }
+    }
+
+    renderPlaylistUI();
+  }
+
+  function renderPlaylistUI() {
+    var navGroup = document.getElementById('previewNavGroup');
+    var navCounter = document.getElementById('previewNavCounter');
+    var btnPrev = document.getElementById('btnPrevFile');
+    var btnNext = document.getElementById('btnNextFile');
+    var dockCounter = document.getElementById('dockCounter');
+    var dockPrev = document.getElementById('dockBtnPrev');
+    var dockNext = document.getElementById('dockBtnNext');
+
+    if (!navGroup) return;
+
+    if (currentPlaylist.length > 1 && currentPlaylistIndex >= 0) {
+      navGroup.style.display = 'inline-flex';
+      var text = (currentPlaylistIndex + 1) + ' / ' + currentPlaylist.length;
+      if (navCounter) navCounter.textContent = text;
+      if (dockCounter) dockCounter.textContent = text;
+
+      var isFirst = currentPlaylistIndex === 0;
+      var isLast = currentPlaylistIndex === currentPlaylist.length - 1;
+
+      if (btnPrev) btnPrev.disabled = isFirst;
+      if (btnNext) btnNext.disabled = isLast;
+      if (dockPrev) dockPrev.disabled = isFirst;
+      if (dockNext) dockNext.disabled = isLast;
+    } else {
+      navGroup.style.display = 'none';
+    }
+  }
+
+  window.previewNextFile = function () {
+    if (currentPlaylistIndex >= 0 && currentPlaylistIndex < currentPlaylist.length - 1) {
+      var nextItem = currentPlaylist[currentPlaylistIndex + 1];
+      window.previewFile(nextItem.id, nextItem.filename, nextItem.mimeType);
+    }
+  };
+
+  window.previewPrevFile = function () {
+    if (currentPlaylistIndex > 0) {
+      var prevItem = currentPlaylist[currentPlaylistIndex - 1];
+      window.previewFile(prevItem.id, prevItem.filename, prevItem.mimeType);
+    }
+  };
+
+  /* ---------------- Virtual Laser Pointer ---------------- */
+  function initLaserCanvas() {
+    if (laserCanvas) return;
+    laserCanvas = document.getElementById('previewLaserCanvas');
+    if (!laserCanvas) return;
+    laserCtx = laserCanvas.getContext('2d');
+    resizeLaserCanvas();
+    window.addEventListener('resize', resizeLaserCanvas);
+  }
+
+  function resizeLaserCanvas() {
+    if (!laserCanvas) return;
+    laserCanvas.width = window.innerWidth;
+    laserCanvas.height = window.innerHeight;
+  }
+
+  function onLaserMove(e) {
+    if (!isLaserActive || !laserCanvas) return;
+    var x = e.clientX != null ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : null);
+    var y = e.clientY != null ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : null);
+    if (x == null || y == null) return;
+
+    var now = Date.now();
+    laserCurrentPos = { x: x, y: y, time: now };
+    laserPoints.push({ x: x, y: y, time: now });
+    if (laserPoints.length > 14) laserPoints.shift();
+  }
+
+  function onLaserLeave() {
+    laserCurrentPos = null;
+  }
+
+  function laserLoop() {
+    if (!isLaserActive || !laserCtx || !laserCanvas) return;
+
+    laserCtx.clearRect(0, 0, laserCanvas.width, laserCanvas.height);
+    var now = Date.now();
+
+    laserPoints = laserPoints.filter(function (p) {
+      return now - p.time < 260;
+    });
+
+    if (laserPoints.length > 1) {
+      for (var i = 1; i < laserPoints.length; i++) {
+        var p1 = laserPoints[i - 1];
+        var p2 = laserPoints[i];
+        var age = now - p2.time;
+        var alpha = Math.max(0, 1 - age / 260);
+
+        laserCtx.beginPath();
+        laserCtx.moveTo(p1.x, p1.y);
+        laserCtx.lineTo(p2.x, p2.y);
+        laserCtx.strokeStyle = 'rgba(255, 30, 60, ' + (alpha * 0.7) + ')';
+        laserCtx.lineWidth = 4 * alpha;
+        laserCtx.lineCap = 'round';
+        laserCtx.stroke();
+      }
+    }
+
+    if (laserCurrentPos && now - laserCurrentPos.time < 600) {
+      var lx = laserCurrentPos.x;
+      var ly = laserCurrentPos.y;
+
+      var grad = laserCtx.createRadialGradient(lx, ly, 2, lx, ly, 26);
+      grad.addColorStop(0, 'rgba(255, 0, 50, 0.95)');
+      grad.addColorStop(0.35, 'rgba(255, 50, 80, 0.6)');
+      grad.addColorStop(1, 'rgba(255, 0, 0, 0)');
+      laserCtx.fillStyle = grad;
+      laserCtx.beginPath();
+      laserCtx.arc(lx, ly, 26, 0, Math.PI * 2);
+      laserCtx.fill();
+
+      laserCtx.fillStyle = '#ff1144';
+      laserCtx.beginPath();
+      laserCtx.arc(lx, ly, 6.5, 0, Math.PI * 2);
+      laserCtx.fill();
+
+      laserCtx.fillStyle = '#ffffff';
+      laserCtx.beginPath();
+      laserCtx.arc(lx, ly, 2.5, 0, Math.PI * 2);
+      laserCtx.fill();
+    }
+
+    laserAnimId = requestAnimationFrame(laserLoop);
+  }
+
+  window.toggleLaserPointer = function (force) {
+    initLaserCanvas();
+    if (!laserCanvas) return;
+
+    isLaserActive = (typeof force === 'boolean') ? force : !isLaserActive;
+
+    var btn = document.getElementById('btnLaserPointer');
+    var dockBtn = document.getElementById('dockBtnLaser');
+
+    if (isLaserActive) {
+      laserCanvas.classList.add('active');
+      if (btn) btn.classList.add('laser-active');
+      if (dockBtn) dockBtn.classList.add('active');
+
+      window.addEventListener('pointermove', onLaserMove, { passive: true });
+      window.addEventListener('touchmove', onLaserMove, { passive: true });
+      window.addEventListener('pointerdown', onLaserMove, { passive: true });
+      window.addEventListener('pointerleave', onLaserLeave, { passive: true });
+
+      cancelAnimationFrame(laserAnimId);
+      laserLoop();
+
+      if (window.showToast) {
+        window.showToast('🔴 Laser Pointer ON! Point anywhere on the screen.', 'info', 2200);
+      }
+    } else {
+      laserCanvas.classList.remove('active');
+      if (btn) btn.classList.remove('laser-active');
+      if (dockBtn) dockBtn.classList.remove('active');
+
+      window.removeEventListener('pointermove', onLaserMove);
+      window.removeEventListener('touchmove', onLaserMove);
+      window.removeEventListener('pointerdown', onLaserMove);
+      window.removeEventListener('pointerleave', onLaserLeave);
+
+      cancelAnimationFrame(laserAnimId);
+      if (laserCtx && laserCanvas) {
+        laserCtx.clearRect(0, 0, laserCanvas.width, laserCanvas.height);
+      }
+      laserPoints = [];
+      laserCurrentPos = null;
+    }
+  };
+
+  /* ---------------- Dark Canvas (Projector Invert) ---------------- */
+  window.toggleDarkCanvas = function (force) {
+    var body = document.getElementById('previewBody');
+    var btn = document.getElementById('btnInvertCanvas');
+    var dockBtn = document.getElementById('dockBtnInvert');
+    if (!body) return;
+
+    isDarkCanvas = (typeof force === 'boolean') ? force : !isDarkCanvas;
+
+    if (isDarkCanvas) {
+      body.classList.add('dark-canvas');
+      if (btn) btn.classList.add('dark-active');
+      if (dockBtn) dockBtn.classList.add('active');
+
+      if (window.showToast) {
+        window.showToast('🌙 Dark Canvas Mode ON (Low glare for projector)', 'info', 2200);
+      }
+    } else {
+      body.classList.remove('dark-canvas');
+      if (btn) btn.classList.remove('dark-active');
+      if (dockBtn) dockBtn.classList.remove('active');
+    }
+  };
+
+  /* ---------------- Zen Focus Mode (Auto-Hide Header) ---------------- */
+  window.toggleZenMode = function (force) {
+    var shell = document.getElementById('previewShell');
+    var dock = document.getElementById('previewFloatingDock');
+    var btn = document.getElementById('btnZenMode');
+    if (!shell) return;
+
+    isZenMode = (typeof force === 'boolean') ? force : !isZenMode;
+
+    if (isZenMode) {
+      shell.classList.add('is-zen');
+      if (dock) dock.style.display = 'flex';
+      if (btn) btn.classList.add('zen-active');
+
+      window.addEventListener('mousemove', handleZenMouseMove);
+
+      if (window.showToast) {
+        window.showToast('📺 Zen Mode: 100% canvas. Move pointer to top to reveal header.', 'info', 2600);
+      }
+    } else {
+      shell.classList.remove('is-zen');
+      if (dock) dock.style.display = 'none';
+      if (btn) btn.classList.remove('zen-active');
+      var head = document.getElementById('previewHead');
+      if (head) head.classList.remove('reveal');
+      window.removeEventListener('mousemove', handleZenMouseMove);
+    }
+  };
+
+  function handleZenMouseMove(e) {
+    if (!isZenMode) return;
+    var head = document.getElementById('previewHead');
+    if (!head) return;
+    if (e.clientY < 40) {
+      head.classList.add('reveal');
+    } else if (e.clientY > 90) {
+      head.classList.remove('reveal');
+    }
+  }
+
+  /* ---------------- Open File Preview ---------------- */
   window.previewFile = function (fileId, filename, mimeType) {
     var back = document.getElementById('previewBack');
     var shell = document.getElementById('previewShell');
@@ -304,10 +607,12 @@
     if (title) title.textContent = filename;
     if (sub) sub.textContent = mimeType;
 
-    // Reset Smart Board state when opening a new preview
-    if (shell) shell.classList.remove('closing', 'is-smartboard', 'is-fullscreen');
-    back.classList.remove('closing', 'is-smartboard', 'is-fullscreen');
-    updateSmartBoardUI(false);
+    // Reset temporary states
+    if (shell) shell.classList.remove('closing');
+    back.classList.remove('closing');
+
+    // Update in-folder playlist
+    scanPlaylist(fileId);
 
     // Set download URL
     if (dlBtn) dlBtn.href = '/files/' + fileId + '/download';
@@ -315,7 +620,6 @@
     back.classList.add('show');
     document.body.style.overflow = 'hidden';
 
-    // Registered route lives under /api
     var url = '/api/files/' + fileId + '/preview';
     var isPdf = mimeType.indexOf('pdf') !== -1 || /\.pdf$/i.test(filename);
     var isImg = mimeType.indexOf('image/') === 0;
@@ -336,7 +640,6 @@
     }
   };
 
-  /* Watch the iframe to detect a 404/HTML error page sneaking in */
   function watchIframe(iframe, filename, fileId, mimeType) {
     if (!iframe) return;
     var checked = false;
@@ -355,9 +658,7 @@
           showFallback(iframe.parentNode, filename, fileId, mimeType,
                        'Preview unavailable — the file may not exist or you may not have access.');
         }
-      } catch (e) {
-        // Cross-origin — cannot inspect. Ignore.
-      }
+      } catch (e) {}
     }
 
     iframe.addEventListener('load', check);
@@ -377,11 +678,16 @@
       '</div>';
   }
 
-  /* Smooth exit animation with cleanup */
+  /* ---------------- Close Preview with Animation ---------------- */
   window.closePreviewWithAnim = function () {
     var back = document.getElementById('previewBack');
     var shell = document.getElementById('previewShell');
     if (!back || !back.classList.contains('show')) return;
+
+    // Reset tools
+    window.toggleLaserPointer(false);
+    window.toggleDarkCanvas(false);
+    window.toggleZenMode(false);
 
     if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
       try {
@@ -404,7 +710,6 @@
     }, 180);
   };
 
-  // Backward compatibility alias
   window.closePreview = window.closePreviewWithAnim;
 
   document.addEventListener('click', function (e) {
@@ -413,17 +718,47 @@
     }
   });
 
-  // Close preview on Esc key
+  /* ---------------- Keyboard & Remote Clicker Shortcuts ---------------- */
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' || e.key === 'Esc') {
-      var back = document.getElementById('previewBack');
-      if (back && back.classList.contains('show')) {
-        if (document.fullscreenElement || document.webkitFullscreenElement) {
-          window.exitSmartBoardMode();
-        } else {
-          window.closePreviewWithAnim();
-        }
+    var back = document.getElementById('previewBack');
+    if (!back || !back.classList.contains('show')) return;
+
+    var tag = (e.target.tagName || '').toLowerCase();
+    var typing = tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable;
+    if (typing) return;
+
+    var key = e.key;
+    var kLower = key.toLowerCase();
+
+    if (key === 'Escape' || key === 'Esc') {
+      if (isZenMode) {
+        window.toggleZenMode(false);
+      } else if (document.fullscreenElement || document.webkitFullscreenElement) {
+        window.exitSmartBoardMode();
+      } else {
+        window.closePreviewWithAnim();
       }
+      return;
+    }
+
+    if (kLower === 'l') {
+      e.preventDefault();
+      window.toggleLaserPointer();
+    } else if (kLower === 'd') {
+      e.preventDefault();
+      window.toggleDarkCanvas();
+    } else if (kLower === 'h' || kLower === 'z') {
+      e.preventDefault();
+      window.toggleZenMode();
+    } else if (kLower === 'f' || kLower === 's') {
+      e.preventDefault();
+      window.toggleSmartBoardMode();
+    } else if (key === 'ArrowRight' || key === ']' || key === 'PageDown') {
+      e.preventDefault();
+      window.previewNextFile();
+    } else if (key === 'ArrowLeft' || key === '[' || key === 'PageUp') {
+      e.preventDefault();
+      window.previewPrevFile();
     }
   });
 })();
