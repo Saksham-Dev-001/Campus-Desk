@@ -19,7 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=14">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/polish.css') }}?v=4">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/polish.css') }}?v=6">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/create-menu.css') }}?v=2">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ux-v3.css') }}?v=8">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/loader.css') }}?v=2">
@@ -365,15 +365,39 @@
 {% endif %}
 
 <div class="preview-back" id="previewBack">
-  <div class="preview-shell">
+  <div class="preview-shell" id="previewShell">
     <div class="preview-head">
-      <div class="title">
-        <span id="previewTitle">File</span>
-        <small id="previewSub"></small>
+      <div class="preview-head-left">
+        <button type="button" class="btn-preview-back" onclick="closePreviewWithAnim()" title="Back / Exit Preview">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          <span>Back</span>
+        </button>
+        <div class="title">
+          <span id="previewTitle">File</span>
+          <small id="previewSub"></small>
+        </div>
       </div>
       <div class="preview-actions">
-        <button class="btn outline sm" onclick="window.print()" title="Print">🖨️</button>
-        <button class="btn outline sm" onclick="closePreview()" title="Close">✕</button>
+        <button type="button" class="btn-smartboard" id="btnSmartBoard" onclick="toggleSmartBoardMode()" title="Smart Board Full Screen Teaching Mode">
+          <svg class="icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+          </svg>
+          <svg class="icon-compress" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 14h6v6m10-10h-6V4m0 6l7-7M3 21l7-7"></path>
+          </svg>
+          <span id="smartBoardLabel">Full Screen (Smart Board)</span>
+        </button>
+        <a id="previewDownloadBtn" href="#" class="btn-preview-tool" title="Download File">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span class="tool-label">Download</span>
+        </a>
+        <button type="button" class="btn-preview-tool" onclick="window.print()" title="Print">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+        </button>
+        <button type="button" class="btn-preview-close" onclick="closePreviewWithAnim()" title="Close Preview" aria-label="Close">✕</button>
       </div>
     </div>
     <div class="preview-body" id="previewBody"></div>
@@ -381,7 +405,7 @@
 </div>
 
 <script src="{{ url_for('static', filename='js/app.js') }}?v=7"></script>
-<script src="{{ url_for('static', filename='js/polish.js') }}?v=2"></script>
+<script src="{{ url_for('static', filename='js/polish.js') }}?v=4"></script>
 <script src="{{ url_for('static', filename='js/create-menu.js') }}?v=1"></script>
 <script src="{{ url_for('static', filename='js/dropzone.js') }}?v=2"></script>
 <script src="{{ url_for('static', filename='js/loader.js') }}?v=1"></script>
