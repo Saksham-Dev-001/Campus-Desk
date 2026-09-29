@@ -43,21 +43,24 @@
       <a href="{{ url_for('student.notices') }}" class="btn ghost sm">View all →</a>
     </div>
     {% if notices %}
-      {% for n in notices %}
-        <div class="item">
-          <div class="item-head">
-            <div class="item-title">{{ n.title }}</div>
-            <span class="badge priority-{{ n.priority }}">{{ n.priority|title }}</span>
+      <div class="dash-notice-list">
+        {% for n in notices %}
+          <div class="dash-notice-row" onclick="openDashNoticeModal({{ loop.index0 }})" role="button" tabindex="0" title="Click to view announcement">
+            <div class="dnr-main">
+              <div class="dnr-title">{{ n.title }}</div>
+              <div class="dnr-meta">
+                <span>📅 {{ n.publish_date.strftime('%d %b %Y') }}</span>
+                {% if n.author %}<span>· by {{ n.author.name }}</span>{% endif %}
+                {% if n.attachment %}<span class="dnr-pill">📎 File attached</span>{% endif %}
+              </div>
+            </div>
+            <div class="dnr-right">
+              <span class="badge priority-{{ n.priority }}">{{ n.priority|title }}</span>
+              <svg class="dnr-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
           </div>
-          {% if n.description %}
-            <div class="item-desc">{{ n.description[:140] }}{% if n.description|length > 140 %}…{% endif %}</div>
-          {% endif %}
-          <div class="item-meta">
-            <span>{{ n.publish_date.strftime('%d %b %Y') }}</span>
-            {% if n.author %}<span>by {{ n.author.name }}</span>{% endif %}
-          </div>
-        </div>
-      {% endfor %}
+        {% endfor %}
+      </div>
     {% else %}
       <div class="empty rich">
         <div class="empty-illust">📭</div>
@@ -73,18 +76,26 @@
       <a href="{{ url_for('student.assignments') }}" class="btn ghost sm">View all →</a>
     </div>
     {% if assignments %}
-      {% for a in assignments %}
-        <div class="item">
-          <div class="item-title">{{ a.title }}</div>
-          <div class="item-meta">
-            {% if a.subject %}<span class="badge">{{ a.subject.name }}</span>{% endif %}
-            {% if a.due_date %}<span>📅 Due {{ a.due_date.strftime('%d %b %Y') }}</span>{% endif %}
-            {% if a.days_left is not none and a.days_left >= 0 %}
-              <span class="badge warn">{{ a.days_left }}d left</span>
-            {% endif %}
+      <div class="dash-notice-list">
+        {% for a in assignments %}
+          <div class="dash-notice-row" onclick="openDashAssignModal({{ loop.index0 }})" role="button" tabindex="0" title="Click to view assignment details">
+            <div class="dnr-main">
+              <div class="dnr-title">{{ a.title }}</div>
+              <div class="dnr-meta">
+                {% if a.subject %}<span>{{ a.subject.name }}</span>{% endif %}
+                {% if a.due_date %}<span>· 📅 Due {{ a.due_date.strftime('%d %b %Y') }}</span>{% endif %}
+                {% if a.attachment %}<span class="dnr-pill">📎 File attached</span>{% endif %}
+              </div>
+            </div>
+            <div class="dnr-right">
+              {% if a.days_left is not none and a.days_left >= 0 %}
+                <span class="badge warn">{{ a.days_left }}d left</span>
+              {% endif %}
+              <svg class="dnr-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div>
           </div>
-        </div>
-      {% endfor %}
+        {% endfor %}
+      </div>
     {% else %}
       <div class="empty rich">
         <div class="empty-illust">✅</div>
@@ -155,4 +166,221 @@
     {% endif %}
   </div>
 </div>
+
+<!-- Dashboard Detail Modal (Announcements & Assignments) -->
+<div class="dash-modal-back" id="dashDetailModalBack" onclick="if(event.target === this) closeDashDetailModal()">
+  <div class="dash-modal-box" role="dialog" aria-modal="true" aria-labelledby="dashModalTitle">
+    <div class="dash-modal-top">
+      <div class="dash-modal-badges">
+        <span class="badge" id="dashModalTypeBadge">Notice</span>
+        <span class="dash-modal-date" id="dashModalDate"></span>
+      </div>
+      <button type="button" class="dash-modal-close" onclick="closeDashDetailModal()" aria-label="Close modal">✕</button>
+    </div>
+    
+    <h3 class="dash-modal-title" id="dashModalTitle"></h3>
+    
+    <div class="dash-modal-author" id="dashModalMetaRow">
+      <span id="dashModalMetaIcon">👤</span>
+      <span id="dashModalMetaText"></span>
+    </div>
+    
+    <div class="dash-modal-content" id="dashModalContent"></div>
+    
+    <div class="dash-modal-attach" id="dashModalAttachRow" style="display:none;">
+      <div class="dma-card">
+        <span class="dma-icon" id="dmaIcon">📄</span>
+        <div class="dma-details">
+          <b id="dmaFilename">document.pdf</b>
+          <span id="dmaFilesize"></span>
+        </div>
+        <div class="dma-btns">
+          <button type="button" class="btn ghost sm" id="dmaPreviewBtn" style="display:none;">👁️ Preview</button>
+          <a href="#" class="btn outline sm" id="dmaDownloadBtn" download>↓ Download</a>
+        </div>
+      </div>
+    </div>
+    
+    <div class="dash-modal-footer">
+      <a href="#" class="btn ghost sm" id="dashModalActionLink">View full page →</a>
+      <button type="button" class="btn sm" onclick="closeDashDetailModal()">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Structured Notice & Assignment Data -->
+<script id="dashNoticesJson" type="application/json">
+[
+  {% for n in notices %}
+  {
+    "title": {{ n.title|tojson }},
+    "description": {{ (n.description or '')|tojson }},
+    "priority": {{ (n.priority or 'normal')|tojson }},
+    "date": {{ n.publish_date.strftime('%d %b %Y, %I:%M %p')|tojson }},
+    "author": {{ (n.author.name if n.author else 'System')|tojson }},
+    "attachment": {% if n.attachment %}{
+      "id": {{ n.attachment.id }},
+      "filename": {{ n.attachment.filename|tojson }},
+      "size": {{ n.attachment.size_formatted|tojson }},
+      "icon": {{ n.attachment.icon|tojson }},
+      "mime": {{ (n.attachment.mime_type or '')|tojson }},
+      "isPreviewable": {{ 'true' if n.attachment.is_previewable else 'false' }},
+      "downloadUrl": {{ url_for('files.download_file', fid=n.attachment.id)|tojson }}
+    }{% else %}null{% endif %}
+  }{% if not loop.last %},{% endif %}
+  {% endfor %}
+]
+</script>
+
+<script id="dashAssignsJson" type="application/json">
+[
+  {% for a in assignments %}
+  {
+    "id": {{ a.id }},
+    "title": {{ a.title|tojson }},
+    "description": {{ (a.description or '')|tojson }},
+    "subject": {{ (a.subject.name if a.subject else '')|tojson }},
+    "dueDate": {{ (a.due_date.strftime('%d %b %Y, %I:%M %p') if a.due_date else '')|tojson }},
+    "daysLeft": {{ a.days_left|tojson if a.days_left is not none else 'null' }},
+    "author": {{ (a.author.name if a.author else '')|tojson }},
+    "attachment": {% if a.attachment %}{
+      "id": {{ a.attachment.id }},
+      "filename": {{ a.attachment.filename|tojson }},
+      "size": {{ a.attachment.size_formatted|tojson }},
+      "icon": {{ a.attachment.icon|tojson }},
+      "mime": {{ (a.attachment.mime_type or '')|tojson }},
+      "isPreviewable": {{ 'true' if a.attachment.is_previewable else 'false' }},
+      "downloadUrl": {{ url_for('files.download_file', fid=a.attachment.id)|tojson }}
+    }{% else %}null{% endif %}
+  }{% if not loop.last %},{% endif %}
+  {% endfor %}
+]
+</script>
+
+<script>
+  let dashNotices = [];
+  let dashAssigns = [];
+  try {
+    const nr = document.getElementById('dashNoticesJson');
+    if (nr) dashNotices = JSON.parse(nr.textContent);
+    const ar = document.getElementById('dashAssignsJson');
+    if (ar) dashAssigns = JSON.parse(ar.textContent);
+  } catch(e) {
+    console.error("Failed to parse dashboard data json", e);
+  }
+
+  function openDashNoticeModal(index) {
+    const n = dashNotices[index];
+    if (!n) return;
+
+    document.getElementById('dashModalTitle').textContent = n.title;
+    document.getElementById('dashModalDate').textContent = n.date;
+    
+    const pBadge = document.getElementById('dashModalTypeBadge');
+    pBadge.className = 'badge priority-' + (n.priority || 'normal');
+    pBadge.textContent = (n.priority || 'Normal').charAt(0).toUpperCase() + (n.priority || 'Normal').slice(1);
+
+    const metaRow = document.getElementById('dashModalMetaRow');
+    const metaIcon = document.getElementById('dashModalMetaIcon');
+    const metaText = document.getElementById('dashModalMetaText');
+    metaRow.style.display = 'flex';
+    metaIcon.style.display = 'inline';
+    metaIcon.textContent = '👤';
+    metaText.textContent = n.author ? ('Published by ' + n.author) : 'Campus Announcement';
+
+    const descEl = document.getElementById('dashModalContent');
+    descEl.textContent = n.description || 'No detailed description provided.';
+
+    setupModalAttachment(n.attachment);
+
+    const actLink = document.getElementById('dashModalActionLink');
+    actLink.href = "{{ url_for('student.notices') }}";
+    actLink.textContent = "View all announcements →";
+
+    const modal = document.getElementById('dashDetailModalBack');
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function openDashAssignModal(index) {
+    const a = dashAssigns[index];
+    if (!a) return;
+
+    document.getElementById('dashModalTitle').textContent = a.title;
+    document.getElementById('dashModalDate').textContent = a.dueDate ? ('Due: ' + a.dueDate) : 'No due date';
+    
+    const pBadge = document.getElementById('dashModalTypeBadge');
+    if (a.daysLeft !== null && a.daysLeft <= 2) {
+      pBadge.className = 'badge danger';
+      pBadge.textContent = a.daysLeft === 0 ? 'Due Today' : (a.daysLeft < 0 ? 'Overdue' : a.daysLeft + 'd left');
+    } else if (a.daysLeft !== null) {
+      pBadge.className = 'badge warn';
+      pBadge.textContent = a.daysLeft + 'd left';
+    } else {
+      pBadge.className = 'badge';
+      pBadge.textContent = 'Assignment';
+    }
+
+    const metaRow = document.getElementById('dashModalMetaRow');
+    const metaIcon = document.getElementById('dashModalMetaIcon');
+    const metaText = document.getElementById('dashModalMetaText');
+    metaRow.style.display = 'flex';
+    metaIcon.style.display = 'inline';
+    metaIcon.textContent = '📘';
+    let parts = [];
+    if (a.subject) parts.push(a.subject);
+    if (a.author) parts.push('By ' + a.author);
+    metaText.textContent = parts.length > 0 ? parts.join(' · ') : 'Academic Assignment';
+
+    const descEl = document.getElementById('dashModalContent');
+    descEl.textContent = a.description || 'No detailed instructions provided.';
+
+    setupModalAttachment(a.attachment);
+
+    const actLink = document.getElementById('dashModalActionLink');
+    actLink.href = "{{ url_for('student.assignments') }}";
+    actLink.textContent = "Open in Assignments →";
+
+    const modal = document.getElementById('dashDetailModalBack');
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function setupModalAttachment(att) {
+    const attachRow = document.getElementById('dashModalAttachRow');
+    if (att) {
+      attachRow.style.display = 'block';
+      document.getElementById('dmaIcon').textContent = att.icon || '📄';
+      document.getElementById('dmaFilename').textContent = att.filename;
+      document.getElementById('dmaFilesize').textContent = att.size || '';
+      
+      const dlBtn = document.getElementById('dmaDownloadBtn');
+      dlBtn.href = att.downloadUrl;
+
+      const prevBtn = document.getElementById('dmaPreviewBtn');
+      if (att.isPreviewable) {
+        prevBtn.style.display = 'inline-flex';
+        prevBtn.onclick = function() {
+          if (typeof window.previewFile === 'function') {
+            window.previewFile(att.id, att.filename, att.mime);
+          }
+        };
+      } else {
+        prevBtn.style.display = 'none';
+      }
+    } else {
+      attachRow.style.display = 'none';
+    }
+  }
+
+  function closeDashDetailModal() {
+    const modal = document.getElementById('dashDetailModalBack');
+    if (modal) modal.classList.remove('show');
+    document.body.style.overflow = '';
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeDashDetailModal();
+  });
+</script>
 {% endblock %}
