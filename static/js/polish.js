@@ -346,7 +346,103 @@
     renderPlaylistUI();
   }
 
-  function renderPlaylistUI() {
+  /* ---------------- PDF.js Presentation Engine ---------------- */
+  var currentPdfDoc = null;
+  var currentPdfPage = 1;
+  var totalPdfPages = 1;
+  var currentPdfScale = 1.0;
+  var currentScaleMode = 'fit-page'; // 'fit-page', 'fit-width', or 'custom'
+  var isRenderingPdf = false;
+  var pendingPdfPage = null;
+
+  function resetPdfState() {
+    currentPdfDoc = null;
+    currentPdfPage = 1;
+    totalPdfPages = 1;
+    currentPdfScale = 1.0;
+    currentScaleMode = 'fit-page';
+    isRenderingPdf = false;
+    pendingPdfPage = null;
+  }
+
+  function renderPdfPage(pageNum) {
+    if (!currentPdfDoc) return;
+    isRenderingPdf = true;
+
+    currentPdfDoc.getPage(pageNum).then(function (page) {
+      var canvas = document.getElementById('pdfCanvas');
+      if (!canvas) {
+        isRenderingPdf = false;
+        return;
+      }
+      var ctx = canvas.getContext('2d');
+      var container = document.getElementById('pdfCanvasContainer');
+      var availWidth = container ? (container.clientWidth - 48) : (window.innerWidth - 60);
+      var availHeight = container ? (container.clientHeight - 48) : (window.innerHeight - 80);
+      if (availWidth < 200) availWidth = 400;
+      if (availHeight < 200) availHeight = 600;
+
+      var unscaledViewport = page.getViewport({ scale: 1.0 });
+      var scale = currentPdfScale;
+      if (currentScaleMode === 'fit-page') {
+        var scaleX = availWidth / unscaledViewport.width;
+        var scaleY = availHeight / unscaledViewport.height;
+        scale = Math.min(scaleX, scaleY);
+        if (scale < 0.2) scale = 0.5;
+        currentPdfScale = scale;
+      } else if (currentScaleMode === 'fit-width') {
+        scale = availWidth / unscaledViewport.width;
+        if (scale < 0.2) scale = 0.5;
+        currentPdfScale = scale;
+      }
+
+      var viewport = page.getViewport({ scale: scale });
+      var outputScale = window.devicePixelRatio || 1;
+
+      canvas.width = Math.floor(viewport.width * outputScale);
+      canvas.height = Math.floor(viewport.height * outputScale);
+      canvas.style.width = Math.floor(viewport.width) + 'px';
+      canvas.style.height = Math.floor(viewport.height) + 'px';
+
+      var transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
+      var renderContext = {
+        canvasContext: ctx,
+        transform: transform,
+        viewport: viewport
+      };
+
+      var renderTask = page.render(renderContext);
+      renderTask.promise.then(function () {
+        isRenderingPdf = false;
+        if (pendingPdfPage !== null) {
+          var p = pendingPdfPage;
+          pendingPdfPage = null;
+          renderPdfPage(p);
+        }
+      }).catch(function (err) {
+        if (err && err.name !== 'RenderingCancelledException') {
+          console.error('PDF page render error:', err);
+        }
+        isRenderingPdf = false;
+      });
+
+      updatePdfNavigationUI();
+    }).catch(function (err) {
+      console.error('Failed to get PDF page:', err);
+      isRenderingPdf = false;
+    });
+  }
+
+  function queueRenderPdfPage(pageNum) {
+    if (isRenderingPdf) {
+      pendingPdfPage = pageNum;
+    } else {
+      renderPdfPage(pageNum);
+    }
+  }
+
+  function updatePdfNavigationUI() {
+    var isPdf = !!currentPdfDoc;
     var navGroup = document.getElementById('previewNavGroup');
     var navCounter = document.getElementById('previewNavCounter');
     var btnPrev = document.getElementById('btnPrevFile');
@@ -354,26 +450,164 @@
     var dockCounter = document.getElementById('dockCounter');
     var dockPrev = document.getElementById('dockBtnPrev');
     var dockNext = document.getElementById('dockBtnNext');
+    var sidePrev = document.getElementById('pdfSidePrev');
+    var sideNext = document.getElementById('pdfSideNext');
+    var zoomVal = document.getElementById('dockZoomVal');
+    var zoomSep = document.getElementById('dockZoomSep');
+    var zIn = document.getElementById('dockBtnZoomIn');
+    var zOut = document.getElementById('dockBtnZoomOut');
+    var zFit = document.getElementById('dockBtnZoomFit');
 
-    if (!navGroup) return;
-
-    if (currentPlaylist.length > 1 && currentPlaylistIndex >= 0) {
-      navGroup.style.display = 'inline-flex';
-      var text = (currentPlaylistIndex + 1) + ' / ' + currentPlaylist.length;
-      if (navCounter) navCounter.textContent = text;
+    if (isPdf) {
+      if (navGroup) navGroup.style.display = 'inline-flex';
+      var text = currentPdfPage + ' / ' + totalPdfPages;
+      if (navCounter) navCounter.textContent = 'Page ' + text;
       if (dockCounter) dockCounter.textContent = text;
 
-      var isFirst = currentPlaylistIndex === 0;
-      var isLast = currentPlaylistIndex === currentPlaylist.length - 1;
+      var atFirst = currentPdfPage <= 1;
+      var atLast = currentPdfPage >= totalPdfPages;
 
-      if (btnPrev) btnPrev.disabled = isFirst;
-      if (btnNext) btnNext.disabled = isLast;
-      if (dockPrev) dockPrev.disabled = isFirst;
-      if (dockNext) dockNext.disabled = isLast;
+      if (btnPrev) btnPrev.disabled = atFirst;
+      if (btnNext) btnNext.disabled = atLast;
+      if (dockPrev) {
+        dockPrev.style.display = 'inline-flex';
+        dockPrev.disabled = atFirst;
+      }
+      if (dockNext) {
+        dockNext.style.display = 'inline-flex';
+        dockNext.disabled = atLast;
+      }
+      if (dockCounter && dockCounter.parentElement) {
+        dockCounter.parentElement.style.display = 'inline-flex';
+      }
+      if (sidePrev) sidePrev.style.display = atFirst ? 'none' : 'flex';
+      if (sideNext) sideNext.style.display = atLast ? 'none' : 'flex';
+
+      if (zoomVal) {
+        if (currentScaleMode === 'fit-page') zoomVal.textContent = 'Fit';
+        else if (currentScaleMode === 'fit-width') zoomVal.textContent = 'Width';
+        else zoomVal.textContent = Math.round(currentPdfScale * 100) + '%';
+      }
+      if (zoomSep) zoomSep.style.display = 'block';
+      if (zIn) zIn.style.display = 'inline-flex';
+      if (zOut) zOut.style.display = 'inline-flex';
+      if (zFit) zFit.style.display = 'inline-flex';
     } else {
-      navGroup.style.display = 'none';
+      // Non-PDF file
+      if (sidePrev) sidePrev.style.display = 'none';
+      if (sideNext) sideNext.style.display = 'none';
+      if (zoomSep) zoomSep.style.display = 'none';
+      if (zIn) zIn.style.display = 'none';
+      if (zOut) zOut.style.display = 'none';
+      if (zFit) zFit.style.display = 'none';
+
+      if (currentPlaylist.length > 1 && currentPlaylistIndex >= 0) {
+        if (navGroup) navGroup.style.display = 'inline-flex';
+        var text = (currentPlaylistIndex + 1) + ' / ' + currentPlaylist.length;
+        if (navCounter) navCounter.textContent = 'Note ' + text;
+        if (dockCounter) dockCounter.textContent = text;
+        var isFirst = currentPlaylistIndex === 0;
+        var isLast = currentPlaylistIndex === currentPlaylist.length - 1;
+        if (btnPrev) btnPrev.disabled = isFirst;
+        if (btnNext) btnNext.disabled = isLast;
+        if (dockPrev) {
+          dockPrev.style.display = 'inline-flex';
+          dockPrev.disabled = isFirst;
+        }
+        if (dockNext) {
+          dockNext.style.display = 'inline-flex';
+          dockNext.disabled = isLast;
+        }
+        if (dockCounter && dockCounter.parentElement) {
+          dockCounter.parentElement.style.display = 'inline-flex';
+        }
+      } else {
+        if (navGroup) navGroup.style.display = 'none';
+        if (dockPrev) dockPrev.style.display = 'none';
+        if (dockNext) dockNext.style.display = 'none';
+        if (dockCounter && dockCounter.parentElement) {
+          dockCounter.parentElement.style.display = 'none';
+        }
+      }
     }
   }
+
+  function renderPlaylistUI() {
+    updatePdfNavigationUI();
+  }
+
+  window.pdfNextPage = function () {
+    if (currentPdfDoc && currentPdfPage < totalPdfPages) {
+      currentPdfPage++;
+      queueRenderPdfPage(currentPdfPage);
+      var container = document.getElementById('pdfCanvasContainer');
+      if (container) container.scrollTop = 0;
+    }
+  };
+
+  window.pdfPrevPage = function () {
+    if (currentPdfDoc && currentPdfPage > 1) {
+      currentPdfPage--;
+      queueRenderPdfPage(currentPdfPage);
+      var container = document.getElementById('pdfCanvasContainer');
+      if (container) container.scrollTop = 0;
+    }
+  };
+
+  window.pdfGoToPage = function (n) {
+    n = parseInt(n, 10);
+    if (currentPdfDoc && !isNaN(n) && n >= 1 && n <= totalPdfPages) {
+      currentPdfPage = n;
+      queueRenderPdfPage(currentPdfPage);
+      var container = document.getElementById('pdfCanvasContainer');
+      if (container) container.scrollTop = 0;
+    }
+  };
+
+  window.promptGoToPage = function () {
+    if (!currentPdfDoc) return;
+    var input = prompt('Go to page (1 - ' + totalPdfPages + '):', currentPdfPage);
+    if (input !== null) {
+      window.pdfGoToPage(input);
+    }
+  };
+
+  window.pdfZoomIn = function () {
+    currentScaleMode = 'custom';
+    currentPdfScale = Math.min(3.5, currentPdfScale * 1.2);
+    queueRenderPdfPage(currentPdfPage);
+  };
+
+  window.pdfZoomOut = function () {
+    currentScaleMode = 'custom';
+    currentPdfScale = Math.max(0.35, currentPdfScale / 1.2);
+    queueRenderPdfPage(currentPdfPage);
+  };
+
+  window.pdfZoomFit = function () {
+    if (currentScaleMode === 'fit-page') {
+      currentScaleMode = 'fit-width';
+    } else {
+      currentScaleMode = 'fit-page';
+    }
+    queueRenderPdfPage(currentPdfPage);
+  };
+
+  window.dockNextAction = function () {
+    if (currentPdfDoc) {
+      window.pdfNextPage();
+    } else {
+      window.previewNextFile();
+    }
+  };
+
+  window.dockPrevAction = function () {
+    if (currentPdfDoc) {
+      window.pdfPrevPage();
+    } else {
+      window.previewPrevFile();
+    }
+  };
 
   window.previewNextFile = function () {
     if (currentPlaylistIndex >= 0 && currentPlaylistIndex < currentPlaylist.length - 1) {
@@ -458,14 +692,61 @@
     document.body.style.overflow = 'hidden';
 
     var url = '/api/files/' + fileId + '/preview';
-    var isPdf = mimeType.indexOf('pdf') !== -1 || /\.pdf$/i.test(filename);
-    var isImg = mimeType.indexOf('image/') === 0;
+    var isPdf = (mimeType && mimeType.indexOf('pdf') !== -1) || /\.pdf$/i.test(filename);
+    var isImg = (mimeType && mimeType.indexOf('image/') === 0) || /\.(png|jpe?g|webp|gif|svg)$/i.test(filename);
+
+    resetPdfState();
 
     if (isPdf) {
       body.innerHTML =
-        '<iframe id="previewFrame" src="' + url + '" title="PDF preview"></iframe>';
-      watchIframe(document.getElementById('previewFrame'), filename, fileId, mimeType);
+        '<div class="pdf-viewer-wrap" id="pdfViewerWrap">' +
+          '<div class="pdf-loading" id="pdfLoading">' +
+            '<div class="pdf-loading-spinner"></div>' +
+            '<span>Opening note presentation...</span>' +
+          '</div>' +
+          '<div class="pdf-canvas-container" id="pdfCanvasContainer" style="display:none;">' +
+            '<canvas id="pdfCanvas"></canvas>' +
+          '</div>' +
+          '<button type="button" class="pdf-side-btn prev" id="pdfSidePrev" onclick="dockPrevAction()" title="Previous Page (←)" style="display:none;">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="15 18 9 12 15 6"></polyline></svg>' +
+          '</button>' +
+          '<button type="button" class="pdf-side-btn next" id="pdfSideNext" onclick="dockNextAction()" title="Next Page (→ / Space)" style="display:none;">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"></polyline></svg>' +
+          '</button>' +
+        '</div>';
+
+      if (window.pdfjsLib) {
+        try {
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        } catch (_) {}
+
+        var loadingTask = window.pdfjsLib.getDocument({
+          url: url,
+          withCredentials: true
+        });
+
+        loadingTask.promise.then(function (pdf) {
+          currentPdfDoc = pdf;
+          totalPdfPages = pdf.numPages;
+          currentPdfPage = 1;
+
+          var loadingEl = document.getElementById('pdfLoading');
+          if (loadingEl) loadingEl.style.display = 'none';
+          var container = document.getElementById('pdfCanvasContainer');
+          if (container) container.style.display = 'flex';
+
+          updatePdfNavigationUI();
+          renderPdfPage(1);
+        }).catch(function (err) {
+          console.warn('PDF.js loading failed, falling back to native iframe:', err);
+          fallbackToIframe(body, url, filename, fileId, mimeType);
+        });
+      } else {
+        fallbackToIframe(body, url, filename, fileId, mimeType);
+      }
     } else if (isImg) {
+      updatePdfNavigationUI();
       body.innerHTML =
         '<img id="previewImg" src="' + url + '" alt="' + filename + '">';
       var img = document.getElementById('previewImg');
@@ -473,9 +754,17 @@
         img.onerror = function () { showFallback(body, filename, fileId, mimeType, 'Could not load image.'); };
       }
     } else {
+      updatePdfNavigationUI();
       showFallback(body, filename, fileId, mimeType, 'This file type cannot be previewed in the browser.');
     }
   };
+
+  function fallbackToIframe(body, url, filename, fileId, mimeType) {
+    if (!body) return;
+    body.innerHTML =
+      '<iframe id="previewFrame" src="' + url + '" title="PDF preview"></iframe>';
+    watchIframe(document.getElementById('previewFrame'), filename, fileId, mimeType);
+  }
 
   function watchIframe(iframe, filename, fileId, mimeType) {
     if (!iframe) return;
@@ -521,6 +810,9 @@
     var shell = document.getElementById('previewShell');
     if (!back || !back.classList.contains('show')) return;
 
+    resetPdfState();
+    updatePdfNavigationUI();
+
     // Reset tools
     window.toggleZenMode(false);
 
@@ -553,6 +845,12 @@
     }
   });
 
+  window.addEventListener('resize', function () {
+    if (currentPdfDoc && (currentScaleMode === 'fit-page' || currentScaleMode === 'fit-width')) {
+      queueRenderPdfPage(currentPdfPage);
+    }
+  });
+
   /* ---------------- Keyboard & Remote Clicker Shortcuts ---------------- */
   document.addEventListener('keydown', function (e) {
     var back = document.getElementById('previewBack');
@@ -582,12 +880,18 @@
     } else if (kLower === 'f' || kLower === 's') {
       e.preventDefault();
       window.toggleSmartBoardMode();
-    } else if (key === 'ArrowRight' || key === ']' || key === 'PageDown') {
+    } else if (key === 'ArrowRight' || key === ']' || key === 'PageDown' || (key === ' ' && !e.shiftKey)) {
       e.preventDefault();
-      window.previewNextFile();
-    } else if (key === 'ArrowLeft' || key === '[' || key === 'PageUp') {
+      window.dockNextAction();
+    } else if (key === 'ArrowLeft' || key === '[' || key === 'PageUp' || (key === ' ' && e.shiftKey)) {
       e.preventDefault();
-      window.previewPrevFile();
+      window.dockPrevAction();
+    } else if (key === '+' || key === '=') {
+      if (currentPdfDoc) { e.preventDefault(); window.pdfZoomIn(); }
+    } else if (key === '-' || key === '_') {
+      if (currentPdfDoc) { e.preventDefault(); window.pdfZoomOut(); }
+    } else if (kLower === '0' || kLower === 'w') {
+      if (currentPdfDoc) { e.preventDefault(); window.pdfZoomFit(); }
     }
   });
 })();
