@@ -344,7 +344,6 @@ class Folder(db.Model):
     section_id = _target_columns()["section_id"]
     batch_id = _target_columns()["batch_id"]
     subject_id = _target_columns()["subject_id"]
-    branch = db.relationship("Branch", foreign_keys=[branch_id])
 
 class FileRecord(db.Model):
     __tablename__ = "files"
@@ -369,7 +368,6 @@ class FileRecord(db.Model):
     section_id = _target_columns()["section_id"]
     batch_id = _target_columns()["batch_id"]
     subject_id = _target_columns()["subject_id"]
-    branch = db.relationship("Branch", foreign_keys=[branch_id])
 
     @property
     def is_previewable(self):
