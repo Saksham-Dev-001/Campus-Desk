@@ -455,9 +455,13 @@ class Assignment(db.Model):
     batch_id = _target_columns()["batch_id"]
     subject_id = _target_columns()["subject_id"]
 
-    @property
-    def subject(self):
-        return Subject.query.get(self.subject_id) if self.subject_id else None
+    course = db.relationship("Course", foreign_keys=[course_id])
+    branch = db.relationship("Branch", foreign_keys=[branch_id])
+    year = db.relationship("Year", foreign_keys=[year_id])
+    semester = db.relationship("Semester", foreign_keys=[semester_id])
+    section = db.relationship("Section", foreign_keys=[section_id])
+    batch = db.relationship("Batch", foreign_keys=[batch_id])
+    subject = db.relationship("Subject", foreign_keys=[subject_id])
 
     @property
     def days_left(self):
