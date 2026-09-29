@@ -234,6 +234,45 @@ def _get_allowed_root_branch_folders(user):
 
     return []
 
+def _get_branch_folder_options(root_folder_id, user):
+    """Return list of all descendant folders under root_folder_id with hierarchical breadcrumb path."""
+    options = []
+    allowed_subs = set(user.allowed_subject_ids()) if (user.role == "teacher" and not _is_global_manager(user)) else None
+
+    def _sub_allowed(f):
+        if allowed_subs is None:
+            return True
+        curr = f
+        while curr:
+            if curr.subject_id is not None:
+                return curr.subject_id in allowed_subs
+            curr = curr.parent
+        return True
+
+    def traverse(fid, path_prefix):
+        children = Folder.query.filter_by(parent_id=fid).order_by(Folder.name).all()
+        for c in children:
+            if not _sub_allowed(c):
+                continue
+            curr_path = f"{path_prefix} › {c.name}" if path_prefix else c.name
+            options.append({
+                "id": c.id,
+                "name": c.name,
+                "path": curr_path
+            })
+            traverse(c.id, curr_path)
+
+    root = Folder.query.get(root_folder_id)
+    if root:
+        options.append({
+            "id": root.id,
+            "name": root.name,
+            "path": f"{root.name} (Root)"
+        })
+        traverse(root.id, "")
+
+    return options
+
 @files_bp.route("/files")
 @login_required
 def browse():
@@ -275,12 +314,17 @@ def browse():
     cm = current_user.role in ("teacher", "admin", "student_admin")
     allowed_root_branch_folders = _get_allowed_root_branch_folders(current_user)
     branches_map = {b.id: b.code for b in Branch.query.all()}
+    branch_subfolders = {}
+    for bf in allowed_root_branch_folders:
+        branch_subfolders[bf.id] = _get_branch_folder_options(bf.id, current_user)
+
     return render_template("files.html", current=cur, crumbs=crumbs,
                            folders=folders, files=files,
                            target_label=target_label, can_manage=cm,
                            can_manage_item=_can_manage_item,
                            allowed_root_branch_folders=allowed_root_branch_folders,
-                           branches_map=branches_map)
+                           branches_map=branches_map,
+                           branch_subfolders=branch_subfolders)
 
 @files_bp.route("/folders/create", methods=["POST"])
 @login_required
@@ -362,17 +406,27 @@ def upload_file():
     if not fid and branch_folder_ids:
         valid_targets = []
         for bfid in branch_folder_ids:
-            bf = Folder.query.get(bfid)
-            if bf and bf.parent_id is None and bf.branch_id is not None:
-                if current_user.is_admin:
-                    valid_targets.append(bf)
-                elif current_user.role == "teacher":
-                    t_user = current_user.teacher
-                    if (t_user and t_user.is_global) or current_user.can_write_branch(bf.branch_id):
-                        valid_targets.append(bf)
-                elif current_user.role == "student_admin":
-                    if current_user.can_write_branch(bf.branch_id):
-                        valid_targets.append(bf)
+            chosen_fid = request.form.get(f"branch_target_folder_{bfid}", type=int) or bfid
+            target_f = Folder.query.get(chosen_fid)
+            if not target_f:
+                continue
+
+            target_bid = target_f.branch_id
+            if current_user.is_admin:
+                valid_targets.append(target_f)
+            elif current_user.role == "teacher":
+                t_user = current_user.teacher
+                if (t_user and t_user.is_global) or (target_bid and current_user.can_write_branch(target_bid)):
+                    sub_id = _effective_subject_id(target_f)
+                    if sub_id is None or current_user.can_access_subject(sub_id):
+                        valid_targets.append(target_f)
+                    else:
+                        current_app.logger.warning(
+                            f"Teacher {current_user.id} unauthorized for subject in folder {chosen_fid}"
+                        )
+            elif current_user.role == "student_admin":
+                if target_bid and current_user.can_write_branch(target_bid):
+                    valid_targets.append(target_f)
 
         if not valid_targets:
             flash("No permitted branch folders selected.", "error")
@@ -394,6 +448,17 @@ def upload_file():
         for tgt in valid_targets:
             tgt_data = dict(t_common)
             tgt_data["branch_id"] = tgt.branch_id
+            if getattr(tgt, "year_id", None):
+                tgt_data["year_id"] = tgt.year_id
+            if getattr(tgt, "semester_id", None):
+                tgt_data["semester_id"] = tgt.semester_id
+            if getattr(tgt, "section_id", None):
+                tgt_data["section_id"] = tgt.section_id
+            if getattr(tgt, "batch_id", None):
+                tgt_data["batch_id"] = tgt.batch_id
+            if getattr(tgt, "subject_id", None):
+                tgt_data["subject_id"] = tgt.subject_id
+
             rec = FileRecord(
                 filename=disp,
                 original_filename=orig,
@@ -418,8 +483,8 @@ def upload_file():
             _aud("file.upload", "FileRecord", rec.id, f"{disp} (multi-branch -> {tgt.name})")
 
         db.session.commit()
-        b_names = [tgt.branch.code if tgt.branch else tgt.name for tgt in valid_targets]
-        flash(f"Uploaded '{disp}' to {len(valid_targets)} branch folders ({', '.join(b_names)}).", "success")
+        b_names = [f"{_bcode(tgt.branch_id) or (tgt.branch.code if getattr(tgt, 'branch', None) else 'Branch')}: {tgt.name}" for tgt in valid_targets]
+        flash(f"Uploaded '{disp}' into {len(valid_targets)} branch folder(s): {', '.join(b_names)}.", "success")
         return redirect(url_for("files.browse"))
 
     folder = Folder.query.get(fid) if fid else None
