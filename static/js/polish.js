@@ -463,6 +463,8 @@
       var text = currentPdfPage + ' / ' + totalPdfPages;
       if (navCounter) navCounter.textContent = 'Page ' + text;
       if (dockCounter) dockCounter.textContent = text;
+      var triggerPage = document.getElementById('dockTriggerPage');
+      if (triggerPage) triggerPage.textContent = text;
 
       var atFirst = currentPdfPage <= 1;
       var atLast = currentPdfPage >= totalPdfPages;
@@ -506,6 +508,8 @@
         var text = (currentPlaylistIndex + 1) + ' / ' + currentPlaylist.length;
         if (navCounter) navCounter.textContent = 'Note ' + text;
         if (dockCounter) dockCounter.textContent = text;
+        var triggerPage = document.getElementById('dockTriggerPage');
+        if (triggerPage) triggerPage.textContent = text;
         var isFirst = currentPlaylistIndex === 0;
         var isLast = currentPlaylistIndex === currentPlaylist.length - 1;
         if (btnPrev) btnPrev.disabled = isFirst;
@@ -528,6 +532,8 @@
         if (dockCounter && dockCounter.parentElement) {
           dockCounter.parentElement.style.display = 'none';
         }
+        var triggerPage = document.getElementById('dockTriggerPage');
+        if (triggerPage) triggerPage.textContent = 'Tools';
       }
     }
   }
@@ -623,10 +629,39 @@
     }
   };
 
-  /* ---------------- Zen Focus Mode (Auto-Hide Header) ---------------- */
+  /* ---------------- Zen Focus Mode & Floating Dock Minimize ---------------- */
+  var isDockCollapsed = true;
+
+  window.toggleDockCollapse = function (collapse) {
+    if (typeof collapse === 'boolean') {
+      isDockCollapsed = collapse;
+    } else {
+      isDockCollapsed = !isDockCollapsed;
+    }
+    updateDockVisibility();
+  };
+
+  function updateDockVisibility() {
+    var dock = document.getElementById('previewFloatingDock');
+    var trigger = document.getElementById('previewDockTrigger');
+    if (!dock) return;
+
+    if (isZenMode) {
+      if (isDockCollapsed) {
+        dock.style.display = 'none';
+        if (trigger) trigger.style.display = 'inline-flex';
+      } else {
+        dock.style.display = 'flex';
+        if (trigger) trigger.style.display = 'none';
+      }
+    } else {
+      dock.style.display = 'none';
+      if (trigger) trigger.style.display = 'none';
+    }
+  }
+
   window.toggleZenMode = function (force) {
     var shell = document.getElementById('previewShell');
-    var dock = document.getElementById('previewFloatingDock');
     var btn = document.getElementById('btnZenMode');
     if (!shell) return;
 
@@ -634,17 +669,18 @@
 
     if (isZenMode) {
       shell.classList.add('is-zen');
-      if (dock) dock.style.display = 'flex';
+      isDockCollapsed = true; // Minimized by default to bottom-right corner!
+      updateDockVisibility();
       if (btn) btn.classList.add('zen-active');
 
       window.addEventListener('mousemove', handleZenMouseMove);
 
       if (window.showToast) {
-        window.showToast('📺 Zen Mode: 100% canvas. Move pointer to top to reveal header.', 'info', 2600);
+        window.showToast('📺 Zen View: Controls minimized to bottom right. Tap to expand.', 'info', 2600);
       }
     } else {
       shell.classList.remove('is-zen');
-      if (dock) dock.style.display = 'none';
+      updateDockVisibility();
       if (btn) btn.classList.remove('zen-active');
       var head = document.getElementById('previewHead');
       if (head) head.classList.remove('reveal');
@@ -811,6 +847,9 @@
     if (!back || !back.classList.contains('show')) return;
 
     resetPdfState();
+    isZenMode = false;
+    isDockCollapsed = true;
+    updateDockVisibility();
     updatePdfNavigationUI();
 
     // Reset tools
@@ -842,7 +881,17 @@
   document.addEventListener('click', function (e) {
     if (e.target && e.target.id === 'previewBack') {
       window.closePreviewWithAnim();
+      return;
     }
+    var dock = document.getElementById('previewFloatingDock');
+    var trigger = document.getElementById('previewDockTrigger');
+    if (!isZenMode || !dock || isDockCollapsed) return;
+    if (dock.contains(e.target) || (trigger && trigger.contains(e.target))) return;
+    var sidePrev = document.getElementById('pdfSidePrev');
+    var sideNext = document.getElementById('pdfSideNext');
+    if ((sidePrev && sidePrev.contains(e.target)) || (sideNext && sideNext.contains(e.target))) return;
+
+    window.toggleDockCollapse(true);
   });
 
   window.addEventListener('resize', function () {
@@ -874,7 +923,12 @@
       return;
     }
 
-    if (kLower === 'h' || kLower === 'z') {
+    if (kLower === 'm') {
+      if (isZenMode) {
+        e.preventDefault();
+        window.toggleDockCollapse();
+      }
+    } else if (kLower === 'h' || kLower === 'z') {
       e.preventDefault();
       window.toggleZenMode();
     } else if (kLower === 'f' || kLower === 's') {
