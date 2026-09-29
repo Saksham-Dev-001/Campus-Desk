@@ -213,15 +213,6 @@
 
   var currentPlaylist = [];
   var currentPlaylistIndex = -1;
-
-  var isLaserActive = false;
-  var laserCanvas = null;
-  var laserCtx = null;
-  var laserPoints = [];
-  var laserAnimId = null;
-  var laserCurrentPos = null;
-
-  var isDarkCanvas = false;
   var isZenMode = false;
 
   /* ---------------- Smart Board Full Screen ---------------- */
@@ -398,160 +389,6 @@
     }
   };
 
-  /* ---------------- Virtual Laser Pointer ---------------- */
-  function initLaserCanvas() {
-    if (laserCanvas) return;
-    laserCanvas = document.getElementById('previewLaserCanvas');
-    if (!laserCanvas) return;
-    laserCtx = laserCanvas.getContext('2d');
-    resizeLaserCanvas();
-    window.addEventListener('resize', resizeLaserCanvas);
-  }
-
-  function resizeLaserCanvas() {
-    if (!laserCanvas) return;
-    laserCanvas.width = window.innerWidth;
-    laserCanvas.height = window.innerHeight;
-  }
-
-  function onLaserMove(e) {
-    if (!isLaserActive || !laserCanvas) return;
-    var x = e.clientX != null ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : null);
-    var y = e.clientY != null ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : null);
-    if (x == null || y == null) return;
-
-    var now = Date.now();
-    laserCurrentPos = { x: x, y: y, time: now };
-    laserPoints.push({ x: x, y: y, time: now });
-    if (laserPoints.length > 14) laserPoints.shift();
-  }
-
-  function onLaserLeave() {
-    laserCurrentPos = null;
-  }
-
-  function laserLoop() {
-    if (!isLaserActive || !laserCtx || !laserCanvas) return;
-
-    laserCtx.clearRect(0, 0, laserCanvas.width, laserCanvas.height);
-    var now = Date.now();
-
-    laserPoints = laserPoints.filter(function (p) {
-      return now - p.time < 260;
-    });
-
-    if (laserPoints.length > 1) {
-      for (var i = 1; i < laserPoints.length; i++) {
-        var p1 = laserPoints[i - 1];
-        var p2 = laserPoints[i];
-        var age = now - p2.time;
-        var alpha = Math.max(0, 1 - age / 260);
-
-        laserCtx.beginPath();
-        laserCtx.moveTo(p1.x, p1.y);
-        laserCtx.lineTo(p2.x, p2.y);
-        laserCtx.strokeStyle = 'rgba(255, 30, 60, ' + (alpha * 0.7) + ')';
-        laserCtx.lineWidth = 4 * alpha;
-        laserCtx.lineCap = 'round';
-        laserCtx.stroke();
-      }
-    }
-
-    if (laserCurrentPos && now - laserCurrentPos.time < 600) {
-      var lx = laserCurrentPos.x;
-      var ly = laserCurrentPos.y;
-
-      var grad = laserCtx.createRadialGradient(lx, ly, 2, lx, ly, 26);
-      grad.addColorStop(0, 'rgba(255, 0, 50, 0.95)');
-      grad.addColorStop(0.35, 'rgba(255, 50, 80, 0.6)');
-      grad.addColorStop(1, 'rgba(255, 0, 0, 0)');
-      laserCtx.fillStyle = grad;
-      laserCtx.beginPath();
-      laserCtx.arc(lx, ly, 26, 0, Math.PI * 2);
-      laserCtx.fill();
-
-      laserCtx.fillStyle = '#ff1144';
-      laserCtx.beginPath();
-      laserCtx.arc(lx, ly, 6.5, 0, Math.PI * 2);
-      laserCtx.fill();
-
-      laserCtx.fillStyle = '#ffffff';
-      laserCtx.beginPath();
-      laserCtx.arc(lx, ly, 2.5, 0, Math.PI * 2);
-      laserCtx.fill();
-    }
-
-    laserAnimId = requestAnimationFrame(laserLoop);
-  }
-
-  window.toggleLaserPointer = function (force) {
-    initLaserCanvas();
-    if (!laserCanvas) return;
-
-    isLaserActive = (typeof force === 'boolean') ? force : !isLaserActive;
-
-    var btn = document.getElementById('btnLaserPointer');
-    var dockBtn = document.getElementById('dockBtnLaser');
-
-    if (isLaserActive) {
-      laserCanvas.classList.add('active');
-      if (btn) btn.classList.add('laser-active');
-      if (dockBtn) dockBtn.classList.add('active');
-
-      window.addEventListener('pointermove', onLaserMove, { passive: true });
-      window.addEventListener('touchmove', onLaserMove, { passive: true });
-      window.addEventListener('pointerdown', onLaserMove, { passive: true });
-      window.addEventListener('pointerleave', onLaserLeave, { passive: true });
-
-      cancelAnimationFrame(laserAnimId);
-      laserLoop();
-
-      if (window.showToast) {
-        window.showToast('🔴 Laser Pointer ON! Point anywhere on the screen.', 'info', 2200);
-      }
-    } else {
-      laserCanvas.classList.remove('active');
-      if (btn) btn.classList.remove('laser-active');
-      if (dockBtn) dockBtn.classList.remove('active');
-
-      window.removeEventListener('pointermove', onLaserMove);
-      window.removeEventListener('touchmove', onLaserMove);
-      window.removeEventListener('pointerdown', onLaserMove);
-      window.removeEventListener('pointerleave', onLaserLeave);
-
-      cancelAnimationFrame(laserAnimId);
-      if (laserCtx && laserCanvas) {
-        laserCtx.clearRect(0, 0, laserCanvas.width, laserCanvas.height);
-      }
-      laserPoints = [];
-      laserCurrentPos = null;
-    }
-  };
-
-  /* ---------------- Dark Canvas (Projector Invert) ---------------- */
-  window.toggleDarkCanvas = function (force) {
-    var body = document.getElementById('previewBody');
-    var btn = document.getElementById('btnInvertCanvas');
-    var dockBtn = document.getElementById('dockBtnInvert');
-    if (!body) return;
-
-    isDarkCanvas = (typeof force === 'boolean') ? force : !isDarkCanvas;
-
-    if (isDarkCanvas) {
-      body.classList.add('dark-canvas');
-      if (btn) btn.classList.add('dark-active');
-      if (dockBtn) dockBtn.classList.add('active');
-
-      if (window.showToast) {
-        window.showToast('🌙 Dark Canvas Mode ON (Low glare for projector)', 'info', 2200);
-      }
-    } else {
-      body.classList.remove('dark-canvas');
-      if (btn) btn.classList.remove('dark-active');
-      if (dockBtn) dockBtn.classList.remove('active');
-    }
-  };
-
   /* ---------------- Zen Focus Mode (Auto-Hide Header) ---------------- */
   window.toggleZenMode = function (force) {
     var shell = document.getElementById('previewShell');
@@ -685,8 +522,6 @@
     if (!back || !back.classList.contains('show')) return;
 
     // Reset tools
-    window.toggleLaserPointer(false);
-    window.toggleDarkCanvas(false);
     window.toggleZenMode(false);
 
     if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
@@ -741,13 +576,7 @@
       return;
     }
 
-    if (kLower === 'l') {
-      e.preventDefault();
-      window.toggleLaserPointer();
-    } else if (kLower === 'd') {
-      e.preventDefault();
-      window.toggleDarkCanvas();
-    } else if (kLower === 'h' || kLower === 'z') {
+    if (kLower === 'h' || kLower === 'z') {
       e.preventDefault();
       window.toggleZenMode();
     } else if (kLower === 'f' || kLower === 's') {
