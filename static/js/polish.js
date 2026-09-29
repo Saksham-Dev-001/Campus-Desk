@@ -414,6 +414,8 @@
       var renderTask = page.render(renderContext);
       renderTask.promise.then(function () {
         isRenderingPdf = false;
+        var container = document.getElementById('pdfCanvasContainer');
+        if (container) setupPdfTouchGestures(container);
         if (pendingPdfPage !== null) {
           var p = pendingPdfPage;
           pendingPdfPage = null;
@@ -439,6 +441,171 @@
     } else {
       renderPdfPage(pageNum);
     }
+  }
+
+  /* ---------------- Smart Board Touch Gesture Engine ---------------- */
+  /* Supports:
+     1. Two-finger pinch-to-zoom:
+        - Instant 60fps CSS transform scaling during touchmove without redrawing canvas
+        - Renders crisp vector PDF at exact final scale on touchend
+     2. Single-finger drag / pan:
+        - Smooth dragging of canvas container when zoomed in or when content overflows
+     3. Single-finger swipe:
+        - Fast horizontal flick left/right when at full-page view to flip slides
+     4. Interactive pen / mouse drag pan when zoomed in
+  */
+  function setupPdfTouchGestures(container) {
+    if (!container || container._hasTouchGestures) return;
+    container._hasTouchGestures = true;
+
+    var initialPinchDist = 0;
+    var initialScale = 1.0;
+    var isPinching = false;
+    var isDragging = false;
+    var touchStartX = 0;
+    var touchStartY = 0;
+    var scrollStartX = 0;
+    var scrollStartY = 0;
+    var touchStartTime = 0;
+    var currentScaleRatio = 1.0;
+
+    function getDistance(t1, t2) {
+      var dx = t1.clientX - t2.clientX;
+      var dy = t1.clientY - t2.clientY;
+      return Math.hypot(dx, dy);
+    }
+
+    container.addEventListener('touchstart', function (e) {
+      if (!currentPdfDoc) return;
+
+      if (e.touches.length === 2) {
+        // Two-finger pinch gesture
+        isPinching = true;
+        isDragging = false;
+        container.classList.add('is-pinching');
+        initialPinchDist = getDistance(e.touches[0], e.touches[1]);
+        initialScale = currentPdfScale;
+        currentScaleRatio = 1.0;
+        e.preventDefault();
+      } else if (e.touches.length === 1) {
+        // Single finger touch
+        isDragging = true;
+        isPinching = false;
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        scrollStartX = container.scrollLeft;
+        scrollStartY = container.scrollTop;
+        touchStartTime = Date.now();
+      }
+    }, { passive: false });
+
+    container.addEventListener('touchmove', function (e) {
+      if (!currentPdfDoc) return;
+
+      if (isPinching && e.touches.length === 2) {
+        e.preventDefault();
+        var currentDist = getDistance(e.touches[0], e.touches[1]);
+        if (initialPinchDist > 5) {
+          currentScaleRatio = currentDist / initialPinchDist;
+          var canvas = document.getElementById('pdfCanvas');
+          if (canvas) {
+            canvas.style.transform = 'scale(' + currentScaleRatio + ')';
+            canvas.style.transformOrigin = 'center center';
+          }
+          var tempScale = Math.min(4.0, Math.max(0.35, initialScale * currentScaleRatio));
+          var zoomVal = document.getElementById('dockZoomVal');
+          if (zoomVal) {
+            zoomVal.textContent = Math.round(tempScale * 100) + '%';
+          }
+        }
+      } else if (isDragging && e.touches.length === 1 && !isPinching) {
+        var dx = e.touches[0].clientX - touchStartX;
+        var dy = e.touches[0].clientY - touchStartY;
+
+        var canScrollX = container.scrollWidth > (container.clientWidth + 10);
+        var canScrollY = container.scrollHeight > (container.clientHeight + 10);
+
+        if (canScrollX || canScrollY || currentPdfScale > 1.1) {
+          container.scrollLeft = scrollStartX - dx;
+          container.scrollTop = scrollStartY - dy;
+          e.preventDefault();
+        }
+      }
+    }, { passive: false });
+
+    function handleTouchEnd(e) {
+      if (!currentPdfDoc) return;
+
+      if (isPinching) {
+        isPinching = false;
+        container.classList.remove('is-pinching');
+        var canvas = document.getElementById('pdfCanvas');
+        if (canvas) {
+          canvas.style.transform = '';
+        }
+        var finalScale = Math.min(4.0, Math.max(0.35, initialScale * currentScaleRatio));
+        if (Math.abs(finalScale - currentPdfScale) > 0.05) {
+          currentScaleMode = 'custom';
+          currentPdfScale = finalScale;
+          queueRenderPdfPage(currentPdfPage);
+        }
+      } else if (isDragging) {
+        isDragging = false;
+        var changedTouch = e.changedTouches ? e.changedTouches[0] : null;
+        if (changedTouch) {
+          var dx = changedTouch.clientX - touchStartX;
+          var dy = changedTouch.clientY - touchStartY;
+          var dt = Date.now() - touchStartTime;
+
+          var canScrollX = container.scrollWidth > (container.clientWidth + 20);
+          if (!canScrollX && dt < 450 && Math.abs(dx) > 75 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+            if (dx < 0) {
+              window.dockNextAction();
+            } else {
+              window.dockPrevAction();
+            }
+          }
+        }
+      }
+    }
+
+    container.addEventListener('touchend', handleTouchEnd);
+    container.addEventListener('touchcancel', handleTouchEnd);
+
+    // Mouse / Interactive Pen drag panning when zoomed in
+    var isMouseDown = false;
+    var mouseStartX = 0;
+    var mouseStartY = 0;
+    var mouseScrollX = 0;
+    var mouseScrollY = 0;
+
+    container.addEventListener('mousedown', function (e) {
+      if (!currentPdfDoc || e.button !== 0) return;
+      var canScroll = (container.scrollWidth > container.clientWidth) || (container.scrollHeight > container.clientHeight) || currentPdfScale > 1.1;
+      if (canScroll) {
+        isMouseDown = true;
+        mouseStartX = e.clientX;
+        mouseStartY = e.clientY;
+        mouseScrollX = container.scrollLeft;
+        mouseScrollY = container.scrollTop;
+        container.style.cursor = 'grabbing';
+      }
+    });
+
+    window.addEventListener('mousemove', function (e) {
+      if (!isMouseDown) return;
+      var dx = e.clientX - mouseStartX;
+      var dy = e.clientY - mouseStartY;
+      container.scrollLeft = mouseScrollX - dx;
+      container.scrollTop = mouseScrollY - dy;
+    });
+
+    window.addEventListener('mouseup', function () {
+      if (isMouseDown) {
+        isMouseDown = false;
+        if (container) container.style.cursor = '';
+      }
+    });
   }
 
   function updatePdfNavigationUI() {
@@ -482,8 +649,18 @@
       if (dockCounter && dockCounter.parentElement) {
         dockCounter.parentElement.style.display = 'inline-flex';
       }
-      if (sidePrev) sidePrev.style.display = atFirst ? 'none' : 'flex';
-      if (sideNext) sideNext.style.display = atLast ? 'none' : 'flex';
+
+      // Always show side arrows in PDF presentation mode with prominent disabled styling
+      if (sidePrev) {
+        sidePrev.style.display = 'flex';
+        sidePrev.disabled = atFirst;
+        sidePrev.classList.toggle('is-disabled', atFirst);
+      }
+      if (sideNext) {
+        sideNext.style.display = 'flex';
+        sideNext.disabled = atLast;
+        sideNext.classList.toggle('is-disabled', atLast);
+      }
 
       if (zoomVal) {
         if (currentScaleMode === 'fit-page') zoomVal.textContent = 'Fit';
@@ -496,13 +673,6 @@
       if (zFit) zFit.style.display = 'inline-flex';
     } else {
       // Non-PDF file
-      if (sidePrev) sidePrev.style.display = 'none';
-      if (sideNext) sideNext.style.display = 'none';
-      if (zoomSep) zoomSep.style.display = 'none';
-      if (zIn) zIn.style.display = 'none';
-      if (zOut) zOut.style.display = 'none';
-      if (zFit) zFit.style.display = 'none';
-
       if (currentPlaylist.length > 1 && currentPlaylistIndex >= 0) {
         if (navGroup) navGroup.style.display = 'inline-flex';
         var text = (currentPlaylistIndex + 1) + ' / ' + currentPlaylist.length;
@@ -525,6 +695,16 @@
         if (dockCounter && dockCounter.parentElement) {
           dockCounter.parentElement.style.display = 'inline-flex';
         }
+        if (sidePrev) {
+          sidePrev.style.display = 'flex';
+          sidePrev.disabled = isFirst;
+          sidePrev.classList.toggle('is-disabled', isFirst);
+        }
+        if (sideNext) {
+          sideNext.style.display = 'flex';
+          sideNext.disabled = isLast;
+          sideNext.classList.toggle('is-disabled', isLast);
+        }
       } else {
         if (navGroup) navGroup.style.display = 'none';
         if (dockPrev) dockPrev.style.display = 'none';
@@ -532,9 +712,16 @@
         if (dockCounter && dockCounter.parentElement) {
           dockCounter.parentElement.style.display = 'none';
         }
+        if (sidePrev) sidePrev.style.display = 'none';
+        if (sideNext) sideNext.style.display = 'none';
         var triggerPage = document.getElementById('dockTriggerPage');
         if (triggerPage) triggerPage.textContent = 'Tools';
       }
+
+      if (zoomSep) zoomSep.style.display = 'none';
+      if (zIn) zIn.style.display = 'none';
+      if (zOut) zOut.style.display = 'none';
+      if (zFit) zFit.style.display = 'none';
     }
   }
 
@@ -743,12 +930,6 @@
           '<div class="pdf-canvas-container" id="pdfCanvasContainer" style="display:none;">' +
             '<canvas id="pdfCanvas"></canvas>' +
           '</div>' +
-          '<button type="button" class="pdf-side-btn prev" id="pdfSidePrev" onclick="dockPrevAction()" title="Previous Page (←)" style="display:none;">' +
-            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="15 18 9 12 15 6"></polyline></svg>' +
-          '</button>' +
-          '<button type="button" class="pdf-side-btn next" id="pdfSideNext" onclick="dockNextAction()" title="Next Page (→ / Space)" style="display:none;">' +
-            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="9 18 15 12 9 6"></polyline></svg>' +
-          '</button>' +
         '</div>';
 
       if (window.pdfjsLib) {
@@ -770,7 +951,10 @@
           var loadingEl = document.getElementById('pdfLoading');
           if (loadingEl) loadingEl.style.display = 'none';
           var container = document.getElementById('pdfCanvasContainer');
-          if (container) container.style.display = 'flex';
+          if (container) {
+            container.style.display = 'flex';
+            setupPdfTouchGestures(container);
+          }
 
           updatePdfNavigationUI();
           renderPdfPage(1);
@@ -854,6 +1038,10 @@
 
     // Reset tools
     window.toggleZenMode(false);
+    var sidePrev = document.getElementById('pdfSidePrev');
+    var sideNext = document.getElementById('pdfSideNext');
+    if (sidePrev) sidePrev.style.display = 'none';
+    if (sideNext) sideNext.style.display = 'none';
 
     if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
       try {
